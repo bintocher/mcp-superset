@@ -5,7 +5,6 @@
 Это гарантирует: добавил пользователя в группу → он видит дашборд и данные.
 """
 
-import re
 from typing import Any
 
 
@@ -120,9 +119,7 @@ async def auto_sync_dashboard_access(
     # Для каждой роли проверяем и добавляем недостающие
     for role_id in role_ids:
         try:
-            perms_resp = await client.get(
-                f"/api/v1/security/roles/{role_id}/permissions/"
-            )
+            perms_resp = await client.get(f"/api/v1/security/roles/{role_id}/permissions/")
             current_perm_ids = set()
             for p in perms_resp.get("result", []):
                 if isinstance(p, dict) and "id" in p:
@@ -137,9 +134,7 @@ async def auto_sync_dashboard_access(
                     missing[ds_id] = pvm_id
 
             if not missing:
-                result["already_ok"].append(
-                    f"Роль {role_id}: все datasource_access уже есть"
-                )
+                result["already_ok"].append(f"Роль {role_id}: все datasource_access уже есть")
                 continue
 
             # Добавляем недостающие
@@ -150,11 +145,13 @@ async def auto_sync_dashboard_access(
             )
 
             missing_names = [dataset_names.get(did, f"id:{did}") for did in missing]
-            result["synced_roles"].append({
-                "role_id": role_id,
-                "added_datasets": missing_names,
-                "total_permissions": len(new_perm_ids),
-            })
+            result["synced_roles"].append(
+                {
+                    "role_id": role_id,
+                    "added_datasets": missing_names,
+                    "total_permissions": len(new_perm_ids),
+                }
+            )
 
         except Exception as e:
             result["errors"].append(f"Ошибка роли {role_id}: {e}")

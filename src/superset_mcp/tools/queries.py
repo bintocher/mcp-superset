@@ -51,21 +51,31 @@ def register_query_tools(mcp):
         # Защита от случайного DDL/DML
         # Убираем комментарии, чтобы нельзя было обойти через /* */ DROP ...
         _dangerous_prefixes = (
-            "DROP", "DELETE", "UPDATE", "INSERT", "TRUNCATE",
-            "ALTER", "CREATE", "GRANT", "REVOKE",
+            "DROP",
+            "DELETE",
+            "UPDATE",
+            "INSERT",
+            "TRUNCATE",
+            "ALTER",
+            "CREATE",
+            "GRANT",
+            "REVOKE",
         )
         sql_clean = _strip_sql_comments(sql).upper()
         for prefix in _dangerous_prefixes:
             if sql_clean.startswith(prefix):
-                return json.dumps({
-                    "error": (
-                        f"ОТКЛОНЕНО: SQL-запрос начинается с '{prefix}' — "
-                        f"это модифицирующая операция (DDL/DML). "
-                        f"Выполнение таких запросов через MCP запрещено. "
-                        f"Если операция действительно необходима — выполните её "
-                        f"напрямую через SQL Lab в Superset UI."
-                    )
-                }, ensure_ascii=False)
+                return json.dumps(
+                    {
+                        "error": (
+                            f"ОТКЛОНЕНО: SQL-запрос начинается с '{prefix}' — "
+                            f"это модифицирующая операция (DDL/DML). "
+                            f"Выполнение таких запросов через MCP запрещено. "
+                            f"Если операция действительно необходима — выполните её "
+                            f"напрямую через SQL Lab в Superset UI."
+                        )
+                    },
+                    ensure_ascii=False,
+                )
 
         payload = {
             "database_id": database_id,
@@ -91,9 +101,7 @@ def register_query_tools(mcp):
         Args:
             sql: SQL-запрос для форматирования.
         """
-        result = await client.post(
-            "/api/v1/sqllab/format_sql/", json_data={"sql": sql}
-        )
+        result = await client.post("/api/v1/sqllab/format_sql/", json_data={"sql": sql})
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -130,9 +138,7 @@ def register_query_tools(mcp):
         payload = {"database_id": database_id, "sql": sql}
         if schema is not None:
             payload["schema"] = schema
-        result = await client.post(
-            "/api/v1/sqllab/estimate/", json_data=payload
-        )
+        result = await client.post("/api/v1/sqllab/estimate/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -193,9 +199,7 @@ def register_query_tools(mcp):
         Args:
             query_id: client_id запроса для остановки (строка из результата sqllab_execute).
         """
-        result = await client.post(
-            "/api/v1/query/stop", json_data={"client_id": query_id}
-        )
+        result = await client.post("/api/v1/query/stop", json_data={"client_id": query_id})
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -288,9 +292,7 @@ def register_query_tools(mcp):
             payload["schema"] = schema
         if description is not None:
             payload["description"] = description
-        result = await client.put(
-            f"/api/v1/saved_query/{saved_query_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/saved_query/{saved_query_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -313,13 +315,16 @@ def register_query_tools(mcp):
             except Exception:
                 label = f"ID={saved_query_id}"
                 db_name = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление сохранённого запроса '{label}' "
-                    f"(ID={saved_query_id}, БД={db_name}). "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление сохранённого запроса '{label}' "
+                        f"(ID={saved_query_id}, БД={db_name}). "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/saved_query/{saved_query_id}")
         return json.dumps(result, ensure_ascii=False)

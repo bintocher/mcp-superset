@@ -107,17 +107,20 @@ def register_dataset_tools(mcp):
         """
         # Защита от случайной потери колонок
         if columns is not None and not confirm_columns_replace:
-            return json.dumps({
-                "error": (
-                    "ОТКЛОНЕНО: передан columns без confirm_columns_replace=True. "
-                    "Superset PUT /dataset/{id} с полем columns ЗАМЕНЯЕТ ВСЕ колонки "
-                    "датасета списком из параметра. Для обновления одной колонки "
-                    "(напр. verbose_name) — передавайте ВСЕ колонки с их ID. "
-                    "Сначала получите текущие колонки через dataset_get, "
-                    "затем передайте полный список с confirm_columns_replace=True. "
-                    "При ошибке — dataset_refresh_schema восстановит колонки из SQL."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        "ОТКЛОНЕНО: передан columns без confirm_columns_replace=True. "
+                        "Superset PUT /dataset/{id} с полем columns ЗАМЕНЯЕТ ВСЕ колонки "
+                        "датасета списком из параметра. Для обновления одной колонки "
+                        "(напр. verbose_name) — передавайте ВСЕ колонки с их ID. "
+                        "Сначала получите текущие колонки через dataset_get, "
+                        "затем передайте полный список с confirm_columns_replace=True. "
+                        "При ошибке — dataset_refresh_schema восстановит колонки из SQL."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         payload = {}
         if table_name is not None:
@@ -130,9 +133,7 @@ def register_dataset_tools(mcp):
             payload["columns"] = json.loads(columns)
         if metrics is not None:
             payload["metrics"] = json.loads(metrics)
-        result = await client.put(
-            f"/api/v1/dataset/{dataset_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/dataset/{dataset_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -144,9 +145,7 @@ def register_dataset_tools(mcp):
         Args:
             dataset_id: ID датасета.
         """
-        result = await client.put(
-            f"/api/v1/dataset/{dataset_id}/refresh", json_data={}
-        )
+        result = await client.put(f"/api/v1/dataset/{dataset_id}/refresh", json_data={})
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -166,21 +165,22 @@ def register_dataset_tools(mcp):
             try:
                 ds_info = await client.get(f"/api/v1/dataset/{dataset_id}")
                 ds_name = ds_info.get("result", {}).get("table_name", "?")
-                related = await client.get(
-                    f"/api/v1/dataset/{dataset_id}/related_objects"
-                )
+                related = await client.get(f"/api/v1/dataset/{dataset_id}/related_objects")
                 charts_count = related.get("charts", {}).get("count", 0)
                 dashboards_count = related.get("dashboards", {}).get("count", 0)
             except Exception:
                 ds_name = f"ID={dataset_id}"
                 charts_count = dashboards_count = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление датасета '{ds_name}' (ID={dataset_id}) "
-                    f"сломает {charts_count} чартов и {dashboards_count} дашбордов. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление датасета '{ds_name}' (ID={dataset_id}) "
+                        f"сломает {charts_count} чартов и {dashboards_count} дашбордов. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/dataset/{dataset_id}")
         return json.dumps(result, ensure_ascii=False)
@@ -212,9 +212,7 @@ def register_dataset_tools(mcp):
         Args:
             dataset_id: ID датасета.
         """
-        result = await client.get(
-            f"/api/v1/dataset/{dataset_id}/related_objects"
-        )
+        result = await client.get(f"/api/v1/dataset/{dataset_id}/related_objects")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -233,12 +231,15 @@ def register_dataset_tools(mcp):
         """
         params = {"q": f"[{dataset_ids}]"}
         raw = await client.get_raw("/api/v1/dataset/export/", params=params)
-        return json.dumps({
-            "format": "zip",
-            "encoding": "base64",
-            "data": base64.b64encode(raw).decode(),
-            "size_bytes": len(raw),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "format": "zip",
+                "encoding": "base64",
+                "data": base64.b64encode(raw).decode(),
+                "size_bytes": len(raw),
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_dataset_import(
@@ -255,7 +256,9 @@ def register_dataset_tools(mcp):
             files = {"formData": (file_path.split("/")[-1], f, "application/zip")}
             data = {"overwrite": "true" if overwrite else "false"}
             result = await client.post_form(
-                "/api/v1/dataset/import/", files=files, data=data,
+                "/api/v1/dataset/import/",
+                files=files,
+                data=data,
             )
         return json.dumps(result, ensure_ascii=False)
 
@@ -279,6 +282,7 @@ def register_dataset_tools(mcp):
         if schema_name is not None:
             payload["schema"] = schema_name
         result = await client.post(
-            "/api/v1/dataset/get_or_create/", json_data=payload,
+            "/api/v1/dataset/get_or_create/",
+            json_data=payload,
         )
         return json.dumps(result, ensure_ascii=False)

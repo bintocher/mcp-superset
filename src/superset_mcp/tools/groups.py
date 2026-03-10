@@ -31,9 +31,7 @@ def register_group_tools(mcp):
             params = {}
             if q:
                 params["q"] = q
-            result = await client.get_all(
-                "/api/v1/security/groups/", params=params
-            )
+            result = await client.get_all("/api/v1/security/groups/", params=params)
         else:
             params = {}
             if q:
@@ -81,9 +79,7 @@ def register_group_tools(mcp):
         if description is not None:
             payload["description"] = description
 
-        result = await client.post(
-            "/api/v1/security/groups/", json_data=payload
-        )
+        result = await client.post("/api/v1/security/groups/", json_data=payload)
         group_id = result.get("id")
 
         # Роли и пользователи назначаются через update (create принимает только name/label/description)
@@ -159,9 +155,7 @@ def register_group_tools(mcp):
                 info = await client.get(f"/api/v1/security/groups/{group_id}")
                 current = info.get("result", {})
                 current_users = current.get("users", [])
-                user_names = [
-                    f"{u['username']} (id={u['id']})" for u in current_users
-                ]
+                user_names = [f"{u['username']} (id={u['id']})" for u in current_users]
             except Exception:
                 user_names = ["не удалось получить"]
             return json.dumps(
@@ -193,9 +187,7 @@ def register_group_tools(mcp):
                 ensure_ascii=False,
             )
 
-        result = await client.put(
-            f"/api/v1/security/groups/{group_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/security/groups/{group_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -256,7 +248,7 @@ def register_group_tools(mcp):
         current_user_ids = {u["id"] for u in current.get("users", [])}
         new_user_ids = current_user_ids | set(user_ids)
 
-        result = await client.put(
+        await client.put(
             f"/api/v1/security/groups/{group_id}",
             json_data={"users": sorted(new_user_ids)},
         )
@@ -291,7 +283,7 @@ def register_group_tools(mcp):
         current_user_ids = {u["id"] for u in current.get("users", [])}
         new_user_ids = current_user_ids - set(user_ids)
 
-        result = await client.put(
+        await client.put(
             f"/api/v1/security/groups/{group_id}",
             json_data={"users": sorted(new_user_ids)},
         )
@@ -326,7 +318,7 @@ def register_group_tools(mcp):
         current_role_ids = {r["id"] for r in current.get("roles", [])}
         new_role_ids = current_role_ids | set(role_ids)
 
-        result = await client.put(
+        await client.put(
             f"/api/v1/security/groups/{group_id}",
             json_data={"roles": sorted(new_role_ids)},
         )
@@ -361,7 +353,7 @@ def register_group_tools(mcp):
         current_role_ids = {r["id"] for r in current.get("roles", [])}
         new_role_ids = current_role_ids - set(role_ids)
 
-        result = await client.put(
+        await client.put(
             f"/api/v1/security/groups/{group_id}",
             json_data={"roles": sorted(new_role_ids)},
         )

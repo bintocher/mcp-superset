@@ -123,22 +123,23 @@ def register_database_tools(mcp):
             try:
                 db_info = await client.get(f"/api/v1/database/{database_id}")
                 db_name = db_info.get("result", {}).get("database_name", "?")
-                related = await client.get(
-                    f"/api/v1/database/{database_id}/related_objects/"
-                )
+                related = await client.get(f"/api/v1/database/{database_id}/related_objects/")
                 charts_count = related.get("charts", {}).get("count", 0)
                 dashboards_count = related.get("dashboards", {}).get("count", 0)
             except Exception:
                 db_name = f"ID={database_id}"
                 charts_count = dashboards_count = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: смена sqlalchemy_uri подключения '{db_name}' "
-                    f"(ID={database_id}) может сломать {charts_count} чартов "
-                    f"и {dashboards_count} дашбордов. "
-                    f"Передайте confirm_uri_change=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: смена sqlalchemy_uri подключения '{db_name}' "
+                        f"(ID={database_id}) может сломать {charts_count} чартов "
+                        f"и {dashboards_count} дашбордов. "
+                        f"Передайте confirm_uri_change=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         payload = {}
         if database_name is not None:
@@ -155,9 +156,7 @@ def register_database_tools(mcp):
             payload["allow_dml"] = allow_dml
         if extra is not None:
             payload["extra"] = extra
-        result = await client.put(
-            f"/api/v1/database/{database_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/database/{database_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -177,21 +176,22 @@ def register_database_tools(mcp):
             try:
                 db_info = await client.get(f"/api/v1/database/{database_id}")
                 db_name = db_info.get("result", {}).get("database_name", "?")
-                related = await client.get(
-                    f"/api/v1/database/{database_id}/related_objects/"
-                )
+                related = await client.get(f"/api/v1/database/{database_id}/related_objects/")
                 charts_count = related.get("charts", {}).get("count", 0)
                 dashboards_count = related.get("dashboards", {}).get("count", 0)
             except Exception:
                 db_name = f"ID={database_id}"
                 charts_count = dashboards_count = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление подключения '{db_name}' (ID={database_id}) "
-                    f"сделает нерабочими {charts_count} чартов и {dashboards_count} дашбордов. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление подключения '{db_name}' (ID={database_id}) "
+                        f"сделает нерабочими {charts_count} чартов и {dashboards_count} дашбордов. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/database/{database_id}")
         return json.dumps(result, ensure_ascii=False)
@@ -217,9 +217,7 @@ def register_database_tools(mcp):
         }
         if extra is not None:
             payload["extra"] = extra
-        result = await client.post(
-            "/api/v1/database/test_connection/", json_data=payload
-        )
+        result = await client.post("/api/v1/database/test_connection/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -285,9 +283,7 @@ def register_database_tools(mcp):
         Args:
             database_id: ID подключения к БД.
         """
-        result = await client.get(
-            f"/api/v1/database/{database_id}/function_names/"
-        )
+        result = await client.get(f"/api/v1/database/{database_id}/function_names/")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -299,9 +295,7 @@ def register_database_tools(mcp):
         Args:
             database_id: ID подключения к БД.
         """
-        result = await client.get(
-            f"/api/v1/database/{database_id}/related_objects/"
-        )
+        result = await client.get(f"/api/v1/database/{database_id}/related_objects/")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -322,9 +316,7 @@ def register_database_tools(mcp):
         payload = {"sql": sql}
         if schema is not None:
             payload["schema"] = schema
-        result = await client.post(
-            f"/api/v1/database/{database_id}/validate_sql/", json_data=payload
-        )
+        result = await client.post(f"/api/v1/database/{database_id}/validate_sql/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -348,9 +340,7 @@ def register_database_tools(mcp):
             "parameters": parameters,
             "configuration_method": configuration_method,
         }
-        result = await client.post(
-            "/api/v1/database/validate_parameters/", json_data=payload
-        )
+        result = await client.post("/api/v1/database/validate_parameters/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -394,7 +384,8 @@ def register_database_tools(mcp):
         if schema_name:
             params["schema"] = schema_name
         result = await client.get(
-            f"/api/v1/database/{database_id}/table_metadata/", params=params,
+            f"/api/v1/database/{database_id}/table_metadata/",
+            params=params,
         )
         return json.dumps(result, ensure_ascii=False)
 
@@ -413,14 +404,18 @@ def register_database_tools(mcp):
             JSON: {"format": "zip", "encoding": "base64", "data": "...", "size_bytes": N}
         """
         import base64
+
         params = {"q": f"[{database_ids}]"}
         raw = await client.get_raw("/api/v1/database/export/", params=params)
-        return json.dumps({
-            "format": "zip",
-            "encoding": "base64",
-            "data": base64.b64encode(raw).decode(),
-            "size_bytes": len(raw),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "format": "zip",
+                "encoding": "base64",
+                "data": base64.b64encode(raw).decode(),
+                "size_bytes": len(raw),
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_database_available_engines() -> str:

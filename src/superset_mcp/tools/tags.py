@@ -119,13 +119,16 @@ def register_tag_tools(mcp):
                 name = info.get("result", {}).get("name", "?")
             except Exception:
                 name = f"ID={tag_id}"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление тега '{name}' (ID={tag_id}) "
-                    f"и всех его привязок к объектам. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление тега '{name}' (ID={tag_id}) "
+                        f"и всех его привязок к объектам. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/tag/{tag_id}")
         return json.dumps(result, ensure_ascii=False)

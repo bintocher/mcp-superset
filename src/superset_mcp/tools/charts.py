@@ -9,22 +9,25 @@ from superset_mcp.tools.helpers import auto_sync_chart_dashboards
 # Паттерны moment.js форматов дат, которые НЕ работают в Superset 6.x
 # Superset использует D3 strftime (%Y-%m-%d), moment.js (YYYY-MM-DD) показывает литерал
 _MOMENTJS_DATE_PATTERNS = re.compile(
-    r'(?<![%\w])'  # не после % или буквы (исключить D3 форматы и слова)
-    r'(?:'
-    r'YYYY[-/.]MM[-/.]DD'  # YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
-    r'|DD[-/.]MM[-/.]YYYY'  # DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
-    r'|MM[-/.]DD[-/.]YYYY'  # MM-DD-YYYY
-    r'|YYYY[-/.]MM'          # YYYY-MM
-    r'|MMM[\s]YYYY'          # MMM YYYY
-    r'|DD[\s]MMM[\s]YYYY'    # DD MMM YYYY
-    r'|HH:mm(?::ss)?'        # HH:mm, HH:mm:ss
-    r')'
+    r"(?<![%\w])"  # не после % или буквы (исключить D3 форматы и слова)
+    r"(?:"
+    r"YYYY[-/.]MM[-/.]DD"  # YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
+    r"|DD[-/.]MM[-/.]YYYY"  # DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
+    r"|MM[-/.]DD[-/.]YYYY"  # MM-DD-YYYY
+    r"|YYYY[-/.]MM"  # YYYY-MM
+    r"|MMM[\s]YYYY"  # MMM YYYY
+    r"|DD[\s]MMM[\s]YYYY"  # DD MMM YYYY
+    r"|HH:mm(?::ss)?"  # HH:mm, HH:mm:ss
+    r")"
 )
 
 # Параметры params, в которых передаются форматы дат
 _DATE_FORMAT_KEYS = {
-    "table_timestamp_format", "x_axis_time_format", "tooltipTimeFormat",
-    "y_axis_format", "header_timestamp_format",
+    "table_timestamp_format",
+    "x_axis_time_format",
+    "tooltipTimeFormat",
+    "y_axis_format",
+    "header_timestamp_format",
 }
 
 # Legacy viz_type, удалённые из фронтенда Superset 5.0/6.x
@@ -58,29 +61,68 @@ _DEPRECATED_VIZ_TYPES = {
 # выдаём предупреждение (возможно опечатка)
 _VALID_VIZ_TYPES = {
     # ECharts
-    "big_number", "big_number_total", "pop_kpi",
-    "box_plot", "bubble_v2", "echarts_area",
-    "echarts_timeseries", "echarts_timeseries_bar",
-    "echarts_timeseries_line", "echarts_timeseries_scatter",
-    "echarts_timeseries_smooth", "echarts_timeseries_step",
-    "funnel", "gantt_chart", "gauge_chart", "graph_chart",
-    "heatmap_v2", "histogram_v2", "mixed_timeseries",
-    "pie", "radar", "sankey_v2", "sunburst_v2",
-    "tree_chart", "treemap_v2", "waterfall",
+    "big_number",
+    "big_number_total",
+    "pop_kpi",
+    "box_plot",
+    "bubble_v2",
+    "echarts_area",
+    "echarts_timeseries",
+    "echarts_timeseries_bar",
+    "echarts_timeseries_line",
+    "echarts_timeseries_scatter",
+    "echarts_timeseries_smooth",
+    "echarts_timeseries_step",
+    "funnel",
+    "gantt_chart",
+    "gauge_chart",
+    "graph_chart",
+    "heatmap_v2",
+    "histogram_v2",
+    "mixed_timeseries",
+    "pie",
+    "radar",
+    "sankey_v2",
+    "sunburst_v2",
+    "tree_chart",
+    "treemap_v2",
+    "waterfall",
     # Таблицы
-    "table", "pivot_table_v2", "ag-grid-table",
+    "table",
+    "pivot_table_v2",
+    "ag-grid-table",
     # Шаблоны и текст
     "handlebars",
     # Карты
-    "country_map", "world_map", "mapbox",
+    "country_map",
+    "world_map",
+    "mapbox",
     # deck.gl
-    "deck_arc", "deck_contour", "deck_geojson", "deck_grid",
-    "deck_heatmap", "deck_hex", "deck_multi", "deck_path",
-    "deck_polygon", "deck_scatter", "deck_screengrid",
+    "deck_arc",
+    "deck_contour",
+    "deck_geojson",
+    "deck_grid",
+    "deck_heatmap",
+    "deck_hex",
+    "deck_multi",
+    "deck_path",
+    "deck_polygon",
+    "deck_scatter",
+    "deck_screengrid",
     # Legacy (пока зарегистрированы, но могут быть удалены в будущем)
-    "bubble", "bullet", "cal_heatmap", "chord", "compare",
-    "horizon", "paired_ttest", "para", "partition",
-    "rose", "time_pivot", "time_table", "word_cloud",
+    "bubble",
+    "bullet",
+    "cal_heatmap",
+    "chord",
+    "compare",
+    "horizon",
+    "paired_ttest",
+    "para",
+    "partition",
+    "rose",
+    "time_pivot",
+    "time_table",
+    "word_cloud",
 }
 
 
@@ -104,8 +146,7 @@ def _validate_chart_params(params_str: str | None, viz_type: str | None = None) 
     elif vt and vt not in _VALID_VIZ_TYPES:
         errors.append(
             f"viz_type '{vt}' не найден в списке актуальных типов Superset 6.x. "
-            f"Возможно опечатка. Доступные типы: "
-            + ", ".join(sorted(_VALID_VIZ_TYPES))
+            f"Возможно опечатка. Доступные типы: " + ", ".join(sorted(_VALID_VIZ_TYPES))
         )
 
     # Парсинг params для всех проверок ниже
@@ -124,7 +165,7 @@ def _validate_chart_params(params_str: str | None, viz_type: str | None = None) 
             "фильтры дашборда (time range, native filters) НЕ будут работать "
             "для этого чарта. SQL будет генерироваться без WHERE по дате. "
             "Добавьте granularity_sqla с названием временной колонки датасета "
-            "(напр. \"granularity_sqla\": \"call_date\"). "
+            '(напр. "granularity_sqla": "call_date"). '
             "Узнать колонку: dataset_get → main_dttm_col или columns[].is_dttm=true"
         )
 
@@ -154,7 +195,7 @@ def _validate_chart_params(params_str: str | None, viz_type: str | None = None) 
                 if isinstance(value, str) and _MOMENTJS_DATE_PATTERNS.search(value):
                     errors.append(
                         f"form_data.'{key}' содержит moment.js формат '{value}' — "
-                        f"замените на D3 strftime (напр. \"%Y-%m-%d\")"
+                        f'замените на D3 strftime (напр. "%Y-%m-%d")'
                     )
 
     if errors:
@@ -385,9 +426,7 @@ def register_chart_tools(mcp):
         # Авто-синхронизация: добавляем datasource_access ролям дашбордов
         new_id = result.get("id")
         if new_id:
-            sync = await auto_sync_chart_dashboards(
-                client, chart_id=new_id, datasource_id=datasource_id
-            )
+            sync = await auto_sync_chart_dashboards(client, chart_id=new_id, datasource_id=datasource_id)
             synced = [s for s in sync if s.get("synced_roles")]
             if synced:
                 result["_auto_access_synced"] = synced
@@ -424,15 +463,18 @@ def register_chart_tools(mcp):
         """
         # Защита от частичного params
         if params is not None and not confirm_params_replace:
-            return json.dumps({
-                "error": (
-                    "ОТКЛОНЕНО: params перезаписывает ВСЕ параметры чарта. "
-                    "Если передать только изменяемый параметр (напр. {\"y_axis_format\": \"d\"}), "
-                    "все остальные настройки (metrics, groupby, filters, цвета) будут УНИЧТОЖЕНЫ. "
-                    "Сначала получите текущие через chart_get, измените нужные поля, "
-                    "передайте ПОЛНЫЙ JSON с confirm_params_replace=True."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        "ОТКЛОНЕНО: params перезаписывает ВСЕ параметры чарта. "
+                        'Если передать только изменяемый параметр (напр. {"y_axis_format": "d"}), '
+                        "все остальные настройки (metrics, groupby, filters, цвета) будут УНИЧТОЖЕНЫ. "
+                        "Сначала получите текущие через chart_get, измените нужные поля, "
+                        "передайте ПОЛНЫЙ JSON с confirm_params_replace=True."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         # Валидация: deprecated viz_type и moment.js форматы
         validation_error = _validate_chart_params(params, viz_type)
@@ -481,16 +523,11 @@ def register_chart_tools(mcp):
                 chart = chart_info.get("result", {})
                 chart_name = chart.get("slice_name", "?")
                 dashboards = chart.get("dashboards", [])
-                dash_names = [
-                    d.get("dashboard_title", f"ID={d.get('id')}")
-                    for d in dashboards
-                ]
+                dash_names = [d.get("dashboard_title", f"ID={d.get('id')}") for d in dashboards]
             except Exception:
                 chart_name = f"ID={chart_id}"
                 dash_names = []
-            msg = (
-                f"ОТКЛОНЕНО: удаление чарта '{chart_name}' (ID={chart_id})"
-            )
+            msg = f"ОТКЛОНЕНО: удаление чарта '{chart_name}' (ID={chart_id})"
             if dash_names:
                 msg += f", привязан к дашбордам: {dash_names}"
             msg += ". Передайте confirm_delete=True для подтверждения."
@@ -563,12 +600,15 @@ def register_chart_tools(mcp):
         """
         params = {"q": f"[{chart_ids}]"}
         raw = await client.get_raw("/api/v1/chart/export/", params=params)
-        return json.dumps({
-            "format": "zip",
-            "encoding": "base64",
-            "data": base64.b64encode(raw).decode(),
-            "size_bytes": len(raw),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "format": "zip",
+                "encoding": "base64",
+                "data": base64.b64encode(raw).decode(),
+                "size_bytes": len(raw),
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_chart_import(
@@ -587,7 +627,9 @@ def register_chart_tools(mcp):
             files = {"formData": (file_path.split("/")[-1], f, "application/zip")}
             data = {"overwrite": "true" if overwrite else "false"}
             result = await client.post_form(
-                "/api/v1/chart/import/", files=files, data=data,
+                "/api/v1/chart/import/",
+                files=files,
+                data=data,
             )
         return json.dumps(result, ensure_ascii=False)
 
@@ -647,6 +689,7 @@ def register_chart_tools(mcp):
         if dashboard_id is not None:
             payload["dashboard_id"] = dashboard_id
         result = await client.put(
-            "/api/v1/chart/warm_up_cache", json_data=payload,
+            "/api/v1/chart/warm_up_cache",
+            json_data=payload,
         )
         return json.dumps(result, ensure_ascii=False)

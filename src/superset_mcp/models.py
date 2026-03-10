@@ -2,17 +2,19 @@
 
 from pydantic import BaseModel, Field
 
-
 # === Общие модели для фильтрации и пагинации ===
+
 
 class ListParams(BaseModel):
     """Параметры пагинации и фильтрации для list-эндпоинтов."""
+
     page: int = Field(default=0, description="Номер страницы (начиная с 0)")
     page_size: int = Field(default=25, description="Размер страницы (макс. 100)")
     q: str | None = Field(default=None, description="JSON-фильтр в формате Superset RISON")
 
 
 # === Dashboard ===
+
 
 class DashboardCreate(BaseModel):
     dashboard_title: str = Field(description="Название дашборда")
@@ -33,6 +35,7 @@ class DashboardUpdate(BaseModel):
 
 # === Chart ===
 
+
 class ChartCreate(BaseModel):
     slice_name: str = Field(description="Название графика")
     viz_type: str = Field(description="Тип визуализации (table, bar, line, pie и т.д.)")
@@ -52,6 +55,7 @@ class ChartUpdate(BaseModel):
 
 
 # === Database ===
+
 
 class DatabaseCreate(BaseModel):
     database_name: str = Field(description="Название подключения")
@@ -76,6 +80,7 @@ class DatabaseUpdate(BaseModel):
 
 # === Dataset ===
 
+
 class DatasetCreate(BaseModel):
     table_name: str = Field(description="Название таблицы/вью")
     database: int = Field(description="ID подключения к БД")
@@ -92,6 +97,7 @@ class DatasetUpdate(BaseModel):
 
 
 # === SQL Lab ===
+
 
 class SQLQuery(BaseModel):
     database_id: int = Field(description="ID подключения к БД")
@@ -111,6 +117,7 @@ class SavedQueryCreate(BaseModel):
 
 
 # === Security ===
+
 
 class UserCreate(BaseModel):
     first_name: str = Field(description="Имя")
@@ -159,6 +166,7 @@ class RLSRuleUpdate(BaseModel):
 
 
 # === Reports ===
+
 
 class ReportCreate(BaseModel):
     name: str = Field(description="Название отчёта/алерта")

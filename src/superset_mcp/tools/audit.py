@@ -16,9 +16,7 @@ async def _build_role_permissions_map(client: Any) -> dict[int, set[int]]:
     for role in roles_resp.get("result", []):
         role_id = role["id"]
         try:
-            perms_resp = await client.get(
-                f"/api/v1/security/roles/{role_id}/permissions/"
-            )
+            perms_resp = await client.get(f"/api/v1/security/roles/{role_id}/permissions/")
             perm_ids = set()
             for p in perms_resp.get("result", []):
                 if isinstance(p, dict) and "id" in p:
@@ -122,9 +120,7 @@ def register_audit_tools(mcp):
         for db in all_dashboards:
             db_id = db["id"]
             try:
-                ds_resp = await client.get(
-                    f"/api/v1/dashboard/{db_id}/datasets"
-                )
+                ds_resp = await client.get(f"/api/v1/dashboard/{db_id}/datasets")
                 ds_ids = set()
                 for ds in ds_resp.get("result", []):
                     if isinstance(ds, dict) and "id" in ds:
@@ -157,10 +153,12 @@ def register_audit_tools(mcp):
                 if uid not in user_groups:
                     user_groups[uid] = []
                     user_group_roles[uid] = set()
-                user_groups[uid].append({
-                    "name": g_name,
-                    "roles": sorted(g_roles),
-                })
+                user_groups[uid].append(
+                    {
+                        "name": g_name,
+                        "roles": sorted(g_roles),
+                    }
+                )
                 user_group_roles[uid] |= g_roles
 
         # RLS: role_id → список регионов
@@ -169,9 +167,7 @@ def register_audit_tools(mcp):
             clause = rule.get("clause", "")
             roles = rule.get("roles", [])
             # Извлекаем регион из clause типа "operation_region = 'Московская'"
-            region_match = re.search(
-                r"operation_region\s*=\s*'([^']+)'", clause
-            )
+            region_match = re.search(r"operation_region\s*=\s*'([^']+)'", clause)
             if clause == "1=1":
                 region = "_all_"
             elif region_match:
@@ -188,35 +184,21 @@ def register_audit_tools(mcp):
 
         # Имена ролей
         roles_resp_all = await client.get_all("/api/v1/security/roles/")
-        role_names: dict[int, str] = {
-            r["id"]: r["name"] for r in roles_resp_all.get("result", [])
-        }
+        role_names: dict[int, str] = {r["id"]: r["name"] for r in roles_resp_all.get("result", [])}
 
         # Названия дашбордов и датасетов
-        dashboard_info = {
-            d["id"]: d.get("dashboard_title", d.get("slug", f"id:{d['id']}"))
-            for d in all_dashboards
-        }
-        dataset_info = {
-            d["id"]: d.get("table_name", f"id:{d['id']}")
-            for d in all_datasets
-        }
+        dashboard_info = {d["id"]: d.get("dashboard_title", d.get("slug", f"id:{d['id']}")) for d in all_dashboards}
+        dataset_info = {d["id"]: d.get("table_name", f"id:{d['id']}") for d in all_datasets}
 
         # === 3. Фильтрация пользователей ===
 
         filtered_users = all_users
         if not include_admin:
             filtered_users = [
-                u for u in filtered_users
-                if not any(
-                    r.get("name") == "Admin" for r in u.get("roles", [])
-                )
+                u for u in filtered_users if not any(r.get("name") == "Admin" for r in u.get("roles", []))
             ]
         if username_filter:
-            filtered_users = [
-                u for u in filtered_users
-                if username_filter.lower() in u.get("username", "").lower()
-            ]
+            filtered_users = [u for u in filtered_users if username_filter.lower() in u.get("username", "").lower()]
 
         total = len(filtered_users)
         start = page * page_size
@@ -290,27 +272,21 @@ def register_audit_tools(mcp):
                 rls_regions = ["нет RLS"]
 
             # Группы пользователя
-            groups_names = [
-                g["name"] for g in user_groups.get(uid, [])
-            ]
+            groups_names = [g["name"] for g in user_groups.get(uid, [])]
 
-            audit_rows.append({
-                "user_id": uid,
-                "username": uname,
-                "active": user.get("active", True),
-                "groups": groups_names,
-                "direct_roles": sorted(
-                    role_names.get(rid, f"id:{rid}")
-                    for rid in direct_role_ids
-                ),
-                "group_roles": sorted(
-                    role_names.get(rid, f"id:{rid}")
-                    for rid in group_role_ids
-                ),
-                "dashboards": dashboards_access,
-                "datasets": datasets_access,
-                "rls_regions": sorted(rls_regions),
-            })
+            audit_rows.append(
+                {
+                    "user_id": uid,
+                    "username": uname,
+                    "active": user.get("active", True),
+                    "groups": groups_names,
+                    "direct_roles": sorted(role_names.get(rid, f"id:{rid}") for rid in direct_role_ids),
+                    "group_roles": sorted(role_names.get(rid, f"id:{rid}") for rid in group_role_ids),
+                    "dashboards": dashboards_access,
+                    "datasets": datasets_access,
+                    "rls_regions": sorted(rls_regions),
+                }
+            )
 
         result = {
             "page": page,

@@ -4,7 +4,6 @@ import base64
 import json
 import uuid
 
-
 KPI_VIZ_TYPES = {"big_number_total", "big_number"}
 MIN_KPI_HEIGHT = 16  # 2 grid cells (1 cell = 8 units)
 
@@ -22,9 +21,7 @@ async def _ensure_datasets_filter_ready(client, dashboard_id: int) -> list[dict]
     """
     updated = []
     try:
-        datasets_resp = await client.get(
-            f"/api/v1/dashboard/{dashboard_id}/datasets"
-        )
+        datasets_resp = await client.get(f"/api/v1/dashboard/{dashboard_id}/datasets")
         datasets = datasets_resp.get("result", [])
     except Exception:
         return updated
@@ -41,11 +38,13 @@ async def _ensure_datasets_filter_ready(client, dashboard_id: int) -> list[dict]
                     f"/api/v1/dataset/{ds_id}",
                     json_data={"always_filter_main_dttm": True},
                 )
-                updated.append({
-                    "id": ds_id,
-                    "name": ds_data.get("table_name", "?"),
-                    "action": "always_filter_main_dttm = True",
-                })
+                updated.append(
+                    {
+                        "id": ds_id,
+                        "name": ds_data.get("table_name", "?"),
+                        "action": "always_filter_main_dttm = True",
+                    }
+                )
         except Exception:
             pass
     return updated
@@ -79,9 +78,7 @@ async def _auto_fix_charts_for_filter(
     is_time_filter = filter_type in _TIME_FILTER_TYPES
 
     try:
-        charts_resp = await client.get(
-            f"/api/v1/dashboard/{dashboard_id}/charts"
-        )
+        charts_resp = await client.get(f"/api/v1/dashboard/{dashboard_id}/charts")
         charts = charts_resp.get("result", [])
     except Exception:
         return result
@@ -125,37 +122,37 @@ async def _auto_fix_charts_for_filter(
         if ds_id and not is_time_filter:
             ds_info = await _get_dataset_info(ds_id)
             if filter_column not in ds_info["column_names"]:
-                result["column_warnings"].append({
-                    "chart_id": chart_id,
-                    "chart_name": chart_name,
-                    "dataset_id": ds_id,
-                    "dataset_name": ds_info["table_name"],
-                    "missing_column": filter_column,
-                    "message": (
-                        f"Фильтр по '{filter_column}' НЕ повлияет на чарт "
-                        f"'{chart_name}' (ID={chart_id}): колонка отсутствует "
-                        f"в датасете '{ds_info['table_name']}' (ID={ds_id})"
-                    ),
-                })
+                result["column_warnings"].append(
+                    {
+                        "chart_id": chart_id,
+                        "chart_name": chart_name,
+                        "dataset_id": ds_id,
+                        "dataset_name": ds_info["table_name"],
+                        "missing_column": filter_column,
+                        "message": (
+                            f"Фильтр по '{filter_column}' НЕ повлияет на чарт "
+                            f"'{chart_name}' (ID={chart_id}): колонка отсутствует "
+                            f"в датасете '{ds_info['table_name']}' (ID={ds_id})"
+                        ),
+                    }
+                )
 
         # --- granularity_sqla ---
         params_str = chart.get("params", "{}")
         try:
-            params = (
-                json.loads(params_str)
-                if isinstance(params_str, str)
-                else (params_str or {})
-            )
+            params = json.loads(params_str) if isinstance(params_str, str) else (params_str or {})
         except json.JSONDecodeError:
             params = {}
 
         current = params.get("granularity_sqla")
         if current:
-            result["charts_already_ok"].append({
-                "id": chart_id,
-                "name": chart_name,
-                "granularity_sqla": current,
-            })
+            result["charts_already_ok"].append(
+                {
+                    "id": chart_id,
+                    "name": chart_name,
+                    "granularity_sqla": current,
+                }
+            )
             continue
 
         # Определяем колонку для granularity_sqla
@@ -181,16 +178,15 @@ async def _auto_fix_charts_for_filter(
                     "params": json.dumps(params, ensure_ascii=False),
                 },
             )
-            result["charts_updated"].append({
-                "id": chart_id,
-                "name": chart_name,
-                "set": f"granularity_sqla = '{sqla_col}'",
-            })
-        except Exception as e:
-            result["warnings"].append(
-                f"chart {chart_id} ({chart_name}): "
-                f"ошибка обновления granularity_sqla: {e}"
+            result["charts_updated"].append(
+                {
+                    "id": chart_id,
+                    "name": chart_name,
+                    "set": f"granularity_sqla = '{sqla_col}'",
+                }
             )
+        except Exception as e:
+            result["warnings"].append(f"chart {chart_id} ({chart_name}): ошибка обновления granularity_sqla: {e}")
 
     return result
 
@@ -229,8 +225,7 @@ def register_dashboard_tools(mcp):
 
         if kpi_violations:
             details = ", ".join(
-                f"chart_id={cid} (viz_type={vt}, height={h}, минимум={MIN_KPI_HEIGHT})"
-                for cid, h, vt in kpi_violations
+                f"chart_id={cid} (viz_type={vt}, height={h}, минимум={MIN_KPI_HEIGHT})" for cid, h, vt in kpi_violations
             )
             return (
                 f"ОТКЛОНЕНО: KPI-чарты (big_number_total/big_number) требуют минимум "
@@ -437,25 +432,19 @@ def register_dashboard_tools(mcp):
             payload["published"] = published
         if json_metadata is not None:
             payload["json_metadata"] = (
-                json.dumps(json_metadata, ensure_ascii=False)
-                if isinstance(json_metadata, dict)
-                else json_metadata
+                json.dumps(json_metadata, ensure_ascii=False) if isinstance(json_metadata, dict) else json_metadata
             )
         if css is not None:
             payload["css"] = css
         if position_json is not None:
             payload["position_json"] = (
-                json.dumps(position_json, ensure_ascii=False)
-                if isinstance(position_json, dict)
-                else position_json
+                json.dumps(position_json, ensure_ascii=False) if isinstance(position_json, dict) else position_json
             )
         if owners is not None:
             payload["owners"] = owners
         if roles is not None:
             payload["roles"] = roles
-        result = await client.put(
-            f"/api/v1/dashboard/{dashboard_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data=payload)
 
         # Автоматика: синхронизировать datasource_access для ролей дашборда
         sync = await auto_sync_dashboard_access(client, dashboard_id)
@@ -471,9 +460,7 @@ def register_dashboard_tools(mcp):
         Args:
             dashboard_id: ID дашборда.
         """
-        result = await client.put(
-            f"/api/v1/dashboard/{dashboard_id}", json_data={"published": True}
-        )
+        await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data={"published": True})
         return json.dumps({"status": "ok", "dashboard_id": dashboard_id, "published": True}, ensure_ascii=False)
 
     @mcp.tool
@@ -485,9 +472,7 @@ def register_dashboard_tools(mcp):
         Args:
             dashboard_id: ID дашборда.
         """
-        result = await client.put(
-            f"/api/v1/dashboard/{dashboard_id}", json_data={"published": False}
-        )
+        await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data={"published": False})
         return json.dumps({"status": "ok", "dashboard_id": dashboard_id, "published": False}, ensure_ascii=False)
 
     @mcp.tool
@@ -510,24 +495,25 @@ def register_dashboard_tools(mcp):
                 title = r.get("dashboard_title", "?")
                 slug = r.get("slug", "")
                 published = r.get("published", False)
-                charts = await client.get(
-                    f"/api/v1/dashboard/{dashboard_id}/charts"
-                )
+                charts = await client.get(f"/api/v1/dashboard/{dashboard_id}/charts")
                 charts_count = len(charts.get("result", []))
             except Exception:
                 title = f"ID={dashboard_id}"
                 slug = ""
                 published = "?"
                 charts_count = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление дашборда '{title}'"
-                    f"{f' (slug={slug})' if slug else ''} "
-                    f"(ID={dashboard_id}, published={published}, "
-                    f"чартов={charts_count}). "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление дашборда '{title}'"
+                        f"{f' (slug={slug})' if slug else ''} "
+                        f"(ID={dashboard_id}, published={published}, "
+                        f"чартов={charts_count}). "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/dashboard/{dashboard_id}")
         return json.dumps(result, ensure_ascii=False)
@@ -580,9 +566,7 @@ def register_dashboard_tools(mcp):
         Args:
             dashboard_id: ID дашборда.
         """
-        result = await client.get(
-            f"/api/v1/dashboard/{dashboard_id}/charts"
-        )
+        result = await client.get(f"/api/v1/dashboard/{dashboard_id}/charts")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -594,9 +578,7 @@ def register_dashboard_tools(mcp):
         Args:
             dashboard_id: ID дашборда.
         """
-        result = await client.get(
-            f"/api/v1/dashboard/{dashboard_id}/datasets"
-        )
+        result = await client.get(f"/api/v1/dashboard/{dashboard_id}/datasets")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -616,12 +598,15 @@ def register_dashboard_tools(mcp):
         """
         params = {"q": f"[{dashboard_ids}]"}
         raw = await client.get_raw("/api/v1/dashboard/export/", params=params)
-        return json.dumps({
-            "format": "zip",
-            "encoding": "base64",
-            "data": base64.b64encode(raw).decode(),
-            "size_bytes": len(raw),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "format": "zip",
+                "encoding": "base64",
+                "data": base64.b64encode(raw).decode(),
+                "size_bytes": len(raw),
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_dashboard_import(
@@ -640,7 +625,9 @@ def register_dashboard_tools(mcp):
             files = {"formData": (file_path.split("/")[-1], f, "application/zip")}
             data = {"overwrite": "true" if overwrite else "false"}
             result = await client.post_form(
-                "/api/v1/dashboard/import/", files=files, data=data,
+                "/api/v1/dashboard/import/",
+                files=files,
+                data=data,
             )
         return json.dumps(result, ensure_ascii=False)
 
@@ -653,9 +640,7 @@ def register_dashboard_tools(mcp):
         Args:
             dashboard_id: ID дашборда.
         """
-        result = await client.get(
-            f"/api/v1/dashboard/{dashboard_id}/embedded"
-        )
+        result = await client.get(f"/api/v1/dashboard/{dashboard_id}/embedded")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -690,20 +675,14 @@ def register_dashboard_tools(mcp):
         Args:
             dashboard_id: ID дашборда.
         """
-        result = await client.delete(
-            f"/api/v1/dashboard/{dashboard_id}/embedded"
-        )
+        result = await client.delete(f"/api/v1/dashboard/{dashboard_id}/embedded")
         return json.dumps(result, ensure_ascii=False)
 
     # --- Инструменты для native-фильтров дашборда ---
 
     def _extract_chart_ids(position: dict) -> list[int]:
         """Извлекает ID чартов из position_json дашборда."""
-        return [
-            v["meta"]["chartId"]
-            for v in position.values()
-            if isinstance(v, dict) and v.get("type") == "CHART"
-        ]
+        return [v["meta"]["chartId"] for v in position.values() if isinstance(v, dict) and v.get("type") == "CHART"]
 
     @mcp.tool
     async def superset_dashboard_filter_list(dashboard_id: int) -> str:
@@ -727,16 +706,18 @@ def register_dashboard_tools(mcp):
             if targets:
                 column = targets[0].get("column", {}).get("name")
                 dataset_id = targets[0].get("datasetId")
-            summary.append({
-                "id": f.get("id"),
-                "name": f.get("name"),
-                "filterType": f.get("filterType"),
-                "column": column,
-                "datasetId": dataset_id,
-                "chartsInScope": f.get("chartsInScope", []),
-                "cascadeParentIds": f.get("cascadeParentIds", []),
-                "controlValues": f.get("controlValues", {}),
-            })
+            summary.append(
+                {
+                    "id": f.get("id"),
+                    "name": f.get("name"),
+                    "filterType": f.get("filterType"),
+                    "column": column,
+                    "datasetId": dataset_id,
+                    "chartsInScope": f.get("chartsInScope", []),
+                    "cascadeParentIds": f.get("cascadeParentIds", []),
+                    "controlValues": f.get("controlValues", {}),
+                }
+            )
         return json.dumps(summary, ensure_ascii=False, indent=2)
 
     @mcp.tool
@@ -806,9 +787,12 @@ def register_dashboard_tools(mcp):
         metadata["native_filter_configuration"] = filters
         metadata["show_native_filters"] = True
 
-        await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data={
-            "json_metadata": json.dumps(metadata, ensure_ascii=False),
-        })
+        await client.put(
+            f"/api/v1/dashboard/{dashboard_id}",
+            json_data={
+                "json_metadata": json.dumps(metadata, ensure_ascii=False),
+            },
+        )
 
         # === Автоматика: настроить датасеты и чарты для работы фильтра ===
         response = {
@@ -818,16 +802,12 @@ def register_dashboard_tools(mcp):
         }
 
         # 1. always_filter_main_dttm на всех датасетах
-        datasets_auto = await _ensure_datasets_filter_ready(
-            client, dashboard_id
-        )
+        datasets_auto = await _ensure_datasets_filter_ready(client, dashboard_id)
         if datasets_auto:
             response["_auto_datasets_updated"] = datasets_auto
 
         # 2. granularity_sqla на чартах + проверка совместимости колонок
-        charts_auto = await _auto_fix_charts_for_filter(
-            client, dashboard_id, column, filter_type
-        )
+        charts_auto = await _auto_fix_charts_for_filter(client, dashboard_id, column, filter_type)
         if charts_auto["charts_updated"]:
             response["_auto_charts_updated"] = charts_auto["charts_updated"]
         if charts_auto["column_warnings"]:
@@ -852,7 +832,7 @@ def register_dashboard_tools(mcp):
 
         Args:
             dashboard_id: ID дашборда.
-            filter_id: ID фильтра (формат "NATIVE_FILTER-<uuid>", напр. "NATIVE_FILTER-a2b79191-9728-40b5-b5ba-fe329a674bf9").
+            filter_id: ID фильтра (формат "NATIVE_FILTER-<uuid>").
             name: Новое название фильтра.
             column: Новая колонка для фильтрации.
             multi_select: Множественный выбор.
@@ -893,9 +873,12 @@ def register_dashboard_tools(mcp):
             target["cascadeParentIds"] = [cascade_parent_id] if cascade_parent_id else []
 
         metadata["native_filter_configuration"] = filters
-        await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data={
-            "json_metadata": json.dumps(metadata, ensure_ascii=False),
-        })
+        await client.put(
+            f"/api/v1/dashboard/{dashboard_id}",
+            json_data={
+                "json_metadata": json.dumps(metadata, ensure_ascii=False),
+            },
+        )
         return json.dumps({"status": "ok", "filter_id": filter_id}, ensure_ascii=False)
 
     @mcp.tool
@@ -929,20 +912,26 @@ def register_dashboard_tools(mcp):
             )
 
         if not confirm_delete:
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление фильтра '{target.get('name', '?')}' "
-                    f"(ID={filter_id}) с дашборда {dashboard_id}. "
-                    f"Всего фильтров на дашборде: {len(filters)}. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление фильтра '{target.get('name', '?')}' "
+                        f"(ID={filter_id}) с дашборда {dashboard_id}. "
+                        f"Всего фильтров на дашборде: {len(filters)}. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         new_filters = [f for f in filters if f.get("id") != filter_id]
         metadata["native_filter_configuration"] = new_filters
-        await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data={
-            "json_metadata": json.dumps(metadata, ensure_ascii=False),
-        })
+        await client.put(
+            f"/api/v1/dashboard/{dashboard_id}",
+            json_data={
+                "json_metadata": json.dumps(metadata, ensure_ascii=False),
+            },
+        )
         return json.dumps(
             {"status": "ok", "deleted": filter_id, "remaining": len(new_filters)},
             ensure_ascii=False,
@@ -984,13 +973,16 @@ def register_dashboard_tools(mcp):
             metadata = json.loads(result.get("json_metadata", "{}"))
             current_filters = metadata.get("native_filter_configuration", [])
             current_names = [f.get("name", "?") for f in current_filters]
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: filter_reset удалит {len(current_filters)} "
-                    f"текущих фильтров: {current_names} и заменит новыми. "
-                    f"Передайте confirm_reset=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: filter_reset удалит {len(current_filters)} "
+                        f"текущих фильтров: {current_names} и заменит новыми. "
+                        f"Передайте confirm_reset=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         dashboard = await client.get(f"/api/v1/dashboard/{dashboard_id}")
         result = dashboard.get("result", {})
@@ -1023,9 +1015,7 @@ def register_dashboard_tools(mcp):
                     "filterState": {},
                     "ownState": {},
                 },
-                "cascadeParentIds": (
-                    [fd["cascade_parent_id"]] if fd.get("cascade_parent_id") else []
-                ),
+                "cascadeParentIds": ([fd["cascade_parent_id"]] if fd.get("cascade_parent_id") else []),
                 "scope": {"rootPath": ["ROOT_ID"], "excluded": []},
                 "chartsInScope": chart_ids,
                 "tabsInScope": [],
@@ -1038,9 +1028,12 @@ def register_dashboard_tools(mcp):
         metadata["cross_filters_enabled"] = True
         metadata["filter_scopes"] = {}
 
-        await client.put(f"/api/v1/dashboard/{dashboard_id}", json_data={
-            "json_metadata": json.dumps(metadata, ensure_ascii=False),
-        })
+        await client.put(
+            f"/api/v1/dashboard/{dashboard_id}",
+            json_data={
+                "json_metadata": json.dumps(metadata, ensure_ascii=False),
+            },
+        )
 
         response = {
             "status": "ok",
@@ -1051,9 +1044,7 @@ def register_dashboard_tools(mcp):
 
         # === Автоматика: настроить датасеты и чарты для работы фильтров ===
         # 1. always_filter_main_dttm на всех датасетах
-        datasets_auto = await _ensure_datasets_filter_ready(
-            client, dashboard_id
-        )
+        datasets_auto = await _ensure_datasets_filter_ready(client, dashboard_id)
         if datasets_auto:
             response["_auto_datasets_updated"] = datasets_auto
 
@@ -1063,15 +1054,11 @@ def register_dashboard_tools(mcp):
         first_type = first_fd.get("type", "filter_select")
         first_col = first_fd.get("column", "")
         if first_col:
-            charts_auto = await _auto_fix_charts_for_filter(
-                client, dashboard_id, first_col, first_type
-            )
+            charts_auto = await _auto_fix_charts_for_filter(client, dashboard_id, first_col, first_type)
             if charts_auto["charts_updated"]:
                 response["_auto_charts_updated"] = charts_auto["charts_updated"]
             if charts_auto["column_warnings"]:
-                response["_auto_column_warnings"] = charts_auto[
-                    "column_warnings"
-                ]
+                response["_auto_column_warnings"] = charts_auto["column_warnings"]
             if charts_auto["warnings"]:
                 response["_auto_warnings"] = charts_auto["warnings"]
 

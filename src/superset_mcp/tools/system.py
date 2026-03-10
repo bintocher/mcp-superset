@@ -132,9 +132,7 @@ def register_system_tools(mcp):
             payload["active"] = active
         if recipients is not None:
             payload["recipients"] = json.loads(recipients)
-        result = await client.put(
-            f"/api/v1/report/{report_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/report/{report_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -158,13 +156,16 @@ def register_system_tools(mcp):
             except Exception:
                 name = f"ID={report_id}"
                 rtype = active = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление {rtype} '{name}' "
-                    f"(ID={report_id}, active={active}). "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление {rtype} '{name}' "
+                        f"(ID={report_id}, active={active}). "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/report/{report_id}")
         return json.dumps(result, ensure_ascii=False)
@@ -312,7 +313,8 @@ def register_system_tools(mcp):
         if descr is not None:
             payload["descr"] = descr
         result = await client.post(
-            "/api/v1/annotation_layer/", json_data=payload,
+            "/api/v1/annotation_layer/",
+            json_data=payload,
         )
         return json.dumps(result, ensure_ascii=False)
 
@@ -327,9 +329,7 @@ def register_system_tools(mcp):
         Args:
             annotation_layer_id: ID слоя (из annotation_layer_list).
         """
-        result = await client.get(
-            f"/api/v1/annotation_layer/{annotation_layer_id}"
-        )
+        result = await client.get(f"/api/v1/annotation_layer/{annotation_layer_id}")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -371,9 +371,7 @@ def register_system_tools(mcp):
         """
         if not confirm_delete:
             try:
-                info = await client.get(
-                    f"/api/v1/annotation_layer/{annotation_layer_id}"
-                )
+                info = await client.get(f"/api/v1/annotation_layer/{annotation_layer_id}")
                 name = info.get("result", {}).get("name", "?")
                 annotations = await client.get(
                     f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/",
@@ -383,17 +381,18 @@ def register_system_tools(mcp):
             except Exception:
                 name = f"ID={annotation_layer_id}"
                 ann_count = "?"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление слоя аннотаций '{name}' "
-                    f"(ID={annotation_layer_id}) вместе с {ann_count} аннотациями. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление слоя аннотаций '{name}' "
+                        f"(ID={annotation_layer_id}) вместе с {ann_count} аннотациями. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
-        result = await client.delete(
-            f"/api/v1/annotation_layer/{annotation_layer_id}"
-        )
+        result = await client.delete(f"/api/v1/annotation_layer/{annotation_layer_id}")
         return json.dumps(result, ensure_ascii=False)
 
     # === Annotation CRUD ===
@@ -446,9 +445,7 @@ def register_system_tools(mcp):
             annotation_layer_id: ID слоя аннотаций.
             annotation_id: ID аннотации (из annotation_list).
         """
-        result = await client.get(
-            f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/{annotation_id}"
-        )
+        result = await client.get(f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/{annotation_id}")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -500,23 +497,22 @@ def register_system_tools(mcp):
         """
         if not confirm_delete:
             try:
-                info = await client.get(
-                    f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/{annotation_id}"
-                )
+                info = await client.get(f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/{annotation_id}")
                 descr = info.get("result", {}).get("short_descr", "?")
             except Exception:
                 descr = f"ID={annotation_id}"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление аннотации '{descr}' "
-                    f"(ID={annotation_id}) из слоя {annotation_layer_id}. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление аннотации '{descr}' "
+                        f"(ID={annotation_id}) из слоя {annotation_layer_id}. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
-        result = await client.delete(
-            f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/{annotation_id}"
-        )
+        result = await client.delete(f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/{annotation_id}")
         return json.dumps(result, ensure_ascii=False)
 
     # === Assets Export/Import ===
@@ -532,12 +528,15 @@ def register_system_tools(mcp):
             JSON: {"format": "zip", "encoding": "base64", "data": "...", "size_bytes": N}
         """
         raw = await client.get_raw("/api/v1/assets/export/")
-        return json.dumps({
-            "format": "zip",
-            "encoding": "base64",
-            "data": base64.b64encode(raw).decode(),
-            "size_bytes": len(raw),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "format": "zip",
+                "encoding": "base64",
+                "data": base64.b64encode(raw).decode(),
+                "size_bytes": len(raw),
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_assets_import(
@@ -556,20 +555,25 @@ def register_system_tools(mcp):
             confirm_overwrite: Подтверждение перезаписи (ОБЯЗАТЕЛЬНО при overwrite=True).
         """
         if overwrite and not confirm_overwrite:
-            return json.dumps({
-                "error": (
-                    "ОТКЛОНЕНО: overwrite=True без confirm_overwrite=True. "
-                    "assets_import с overwrite=True перезаписывает ВСЕ совпадающие "
-                    "объекты (дашборды, чарты, датасеты, подключения к БД). "
-                    "Это может откатить весь Superset к состоянию из ZIP-файла. "
-                    "Передайте confirm_overwrite=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        "ОТКЛОНЕНО: overwrite=True без confirm_overwrite=True. "
+                        "assets_import с overwrite=True перезаписывает ВСЕ совпадающие "
+                        "объекты (дашборды, чарты, датасеты, подключения к БД). "
+                        "Это может откатить весь Superset к состоянию из ZIP-файла. "
+                        "Передайте confirm_overwrite=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         with open(file_path, "rb") as f:
             files = {"bundle": (file_path.split("/")[-1], f, "application/zip")}
             data = {"overwrite": "true" if overwrite else "false"}
             result = await client.post_form(
-                "/api/v1/assets/import/", files=files, data=data,
+                "/api/v1/assets/import/",
+                files=files,
+                data=data,
             )
         return json.dumps(result, ensure_ascii=False)

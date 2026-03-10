@@ -148,9 +148,7 @@ def register_security_tools(mcp):
         }
         if roles is not None:
             payload["roles"] = roles
-        result = await client.post(
-            "/api/v1/security/users/", json_data=payload
-        )
+        result = await client.post("/api/v1/security/users/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -183,21 +181,21 @@ def register_security_tools(mcp):
             try:
                 user_info = await client.get(f"/api/v1/security/users/{user_id}")
                 user = user_info.get("result", {})
-                current_roles = [
-                    {"id": r["id"], "name": r.get("name", "?")}
-                    for r in user.get("roles", [])
-                ]
+                current_roles = [{"id": r["id"], "name": r.get("name", "?")} for r in user.get("roles", [])]
             except Exception:
                 current_roles = "не удалось получить"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: roles ЗАМЕНИТ все текущие роли пользователя. "
-                    f"Текущие роли: {current_roles}. "
-                    f"Запрошенные роли: {roles}. "
-                    f"Для добавления одной роли — включите её ID в полный список. "
-                    f"Передайте confirm_roles_replace=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: roles ЗАМЕНИТ все текущие роли пользователя. "
+                        f"Текущие роли: {current_roles}. "
+                        f"Запрошенные роли: {roles}. "
+                        f"Для добавления одной роли — включите её ID в полный список. "
+                        f"Передайте confirm_roles_replace=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         payload = {}
         if first_name is not None:
@@ -210,9 +208,7 @@ def register_security_tools(mcp):
             payload["roles"] = roles
         if active is not None:
             payload["active"] = active
-        result = await client.put(
-            f"/api/v1/security/users/{user_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/security/users/{user_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -240,26 +236,32 @@ def register_security_tools(mcp):
             except Exception:
                 username = f"ID={user_id}"
                 roles = []
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление пользователя '{username}' "
-                    f"(роли: {roles}) необратимо. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление пользователя '{username}' "
+                        f"(роли: {roles}) необратимо. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         # Защита от удаления текущего сервисного аккаунта
         try:
             me = await client.get("/api/v1/me/")
             me_result = me.get("result", {})
             if me_result.get("pk") == user_id or me_result.get("id") == user_id:
-                return json.dumps({
-                    "error": (
-                        "ЗАБЛОКИРОВАНО: нельзя удалить текущий сервисный аккаунт "
-                        f"('{me_result.get('username', 'mcp_service')}'). "
-                        "Это заблокирует весь MCP-сервер."
-                    )
-                }, ensure_ascii=False)
+                return json.dumps(
+                    {
+                        "error": (
+                            "ЗАБЛОКИРОВАНО: нельзя удалить текущий сервисный аккаунт "
+                            f"('{me_result.get('username', 'mcp_service')}'). "
+                            "Это заблокирует весь MCP-сервер."
+                        )
+                    },
+                    ensure_ascii=False,
+                )
         except Exception:
             pass
 
@@ -317,9 +319,7 @@ def register_security_tools(mcp):
         Args:
             name: Название роли (уникальное).
         """
-        result = await client.post(
-            "/api/v1/security/roles/", json_data={"name": name}
-        )
+        result = await client.post("/api/v1/security/roles/", json_data={"name": name})
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -330,16 +330,21 @@ def register_security_tools(mcp):
             role_id: ID роли для переименования.
             name: Новое название роли.
         """
-        result = await client.put(
-            f"/api/v1/security/roles/{role_id}", json_data={"name": name}
-        )
+        result = await client.put(f"/api/v1/security/roles/{role_id}", json_data={"name": name})
         return json.dumps(result, ensure_ascii=False)
 
     # Защищённые роли, которые нельзя удалять
-    _PROTECTED_ROLE_NAMES = frozenset({
-        "Admin", "Alpha", "Gamma", "Public", "sql_lab",
-        "no_access", "la_region_all",
-    })
+    _PROTECTED_ROLE_NAMES = frozenset(
+        {
+            "Admin",
+            "Alpha",
+            "Gamma",
+            "Public",
+            "sql_lab",
+            "no_access",
+            "la_region_all",
+        }
+    )
     _PROTECTED_ROLE_PREFIXES = ("la_report_", "la_region_", "la_developer")
 
     @mcp.tool
@@ -364,26 +369,30 @@ def register_security_tools(mcp):
             role_name = f"ID={role_id}"
 
         # Блокировка защищённых ролей
-        if role_name in _PROTECTED_ROLE_NAMES or any(
-            role_name.startswith(p) for p in _PROTECTED_ROLE_PREFIXES
-        ):
-            return json.dumps({
-                "error": (
-                    f"ЗАБЛОКИРОВАНО: роль '{role_name}' (ID={role_id}) "
-                    f"является системной или частью RLS-архитектуры проекта. "
-                    f"Удаление этой роли может нарушить доступ пользователей "
-                    f"к дашбордам или снять RLS-защиту данных."
-                )
-            }, ensure_ascii=False)
+        if role_name in _PROTECTED_ROLE_NAMES or any(role_name.startswith(p) for p in _PROTECTED_ROLE_PREFIXES):
+            return json.dumps(
+                {
+                    "error": (
+                        f"ЗАБЛОКИРОВАНО: роль '{role_name}' (ID={role_id}) "
+                        f"является системной или частью RLS-архитектуры проекта. "
+                        f"Удаление этой роли может нарушить доступ пользователей "
+                        f"к дашбордам или снять RLS-защиту данных."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         if not confirm_delete:
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление роли '{role_name}' (ID={role_id}). "
-                    f"Все пользователи с этой ролью потеряют связанные права. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление роли '{role_name}' (ID={role_id}). "
+                        f"Все пользователи с этой ролью потеряют связанные права. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/security/roles/{role_id}")
         return json.dumps(result, ensure_ascii=False)
@@ -411,16 +420,12 @@ def register_security_tools(mcp):
             params = {}
             if q:
                 params["q"] = q
-            result = await client.get_all(
-                "/api/v1/security/permissions/", params=params
-            )
+            result = await client.get_all("/api/v1/security/permissions/", params=params)
         else:
             params = {"page": page, "page_size": page_size}
             if q:
                 params["q"] = q
-            result = await client.get(
-                "/api/v1/security/permissions/", params=params
-            )
+            result = await client.get("/api/v1/security/permissions/", params=params)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -432,9 +437,7 @@ def register_security_tools(mcp):
         Args:
             role_id: ID роли.
         """
-        result = await client.get(
-            f"/api/v1/security/roles/{role_id}/permissions/"
-        )
+        result = await client.get(f"/api/v1/security/roles/{role_id}/permissions/")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -458,16 +461,19 @@ def register_security_tools(mcp):
             confirm_full_replace: Подтверждение полной замены прав (ОБЯЗАТЕЛЬНО).
         """
         if not confirm_full_replace:
-            return json.dumps({
-                "error": (
-                    "ОТКЛОНЕНО: не передан confirm_full_replace=True. "
-                    "POST /api/v1/security/roles/{id}/permissions ЗАМЕНЯЕТ ВСЕ "
-                    "права роли на переданный список. Для добавления одного права: "
-                    "1) Получите текущие через role_permissions_get, "
-                    "2) Добавьте новый ID в список, "
-                    "3) Передайте ПОЛНЫЙ список с confirm_full_replace=True."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        "ОТКЛОНЕНО: не передан confirm_full_replace=True. "
+                        "POST /api/v1/security/roles/{id}/permissions ЗАМЕНЯЕТ ВСЕ "
+                        "права роли на переданный список. Для добавления одного права: "
+                        "1) Получите текущие через role_permissions_get, "
+                        "2) Добавьте новый ID в список, "
+                        "3) Передайте ПОЛНЫЙ список с confirm_full_replace=True."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.post(
             f"/api/v1/security/roles/{role_id}/permissions",
@@ -509,55 +515,44 @@ def register_security_tools(mcp):
             dash_title = dash.get("dashboard_title", f"ID={dashboard_id}")
             dash_slug = dash.get("slug", "")
         except Exception as e:
-            return json.dumps({
-                "error": f"Дашборд ID={dashboard_id} не найден: {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Дашборд ID={dashboard_id} не найден: {e}"}, ensure_ascii=False)
 
         # 2. Проверяем роль
         try:
             role_info = await client.get(f"/api/v1/security/roles/{role_id}")
             role_name = role_info.get("result", {}).get("name", f"ID={role_id}")
         except Exception as e:
-            return json.dumps({
-                "error": f"Роль ID={role_id} не найдена: {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Роль ID={role_id} не найдена: {e}"}, ensure_ascii=False)
 
         # 3. Получаем датасеты дашборда
         try:
-            ds_resp = await client.get(
-                f"/api/v1/dashboard/{dashboard_id}/datasets"
-            )
+            ds_resp = await client.get(f"/api/v1/dashboard/{dashboard_id}/datasets")
             datasets = ds_resp.get("result", [])
         except Exception as e:
-            return json.dumps({
-                "error": (
-                    f"Не удалось получить датасеты дашборда "
-                    f"'{dash_title}': {e}"
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {"error": (f"Не удалось получить датасеты дашборда '{dash_title}': {e}")}, ensure_ascii=False
+            )
 
         if not datasets:
-            return json.dumps({
-                "error": (
-                    f"Дашборд '{dash_title}' (ID={dashboard_id}) не содержит "
-                    f"датасетов. Возможно, на нём нет чартов."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"Дашборд '{dash_title}' (ID={dashboard_id}) не содержит "
+                        f"датасетов. Возможно, на нём нет чартов."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         dataset_ids = {ds["id"] for ds in datasets}
-        dataset_names = {
-            ds["id"]: f"{ds.get('schema', '?')}.{ds.get('table_name', '?')}"
-            for ds in datasets
-        }
+        dataset_names = {ds["id"]: f"{ds.get('schema', '?')}.{ds.get('table_name', '?')}" for ds in datasets}
 
         # 4. Находим datasource_access для каждого датасета
         ds_perms = await _find_datasource_permissions(client, dataset_ids)
 
         missing_ds = dataset_ids - ds_perms.keys()
         if missing_ds:
-            missing_names = [
-                f"{dataset_names.get(d, '?')} (id:{d})" for d in missing_ds
-            ]
+            missing_names = [f"{dataset_names.get(d, '?')} (id:{d})" for d in missing_ds]
             errors.append(
                 f"Не найден datasource_access для датасетов: "
                 f"{', '.join(missing_names)}. "
@@ -568,17 +563,13 @@ def register_security_tools(mcp):
 
         # 5. Получаем текущие права роли
         try:
-            role_perms_resp = await client.get(
-                f"/api/v1/security/roles/{role_id}/permissions/"
-            )
+            role_perms_resp = await client.get(f"/api/v1/security/roles/{role_id}/permissions/")
             role_perms = role_perms_resp.get("result", [])
             if isinstance(role_perms, str):
                 role_perms = json.loads(role_perms)
             current_perm_ids = {p["id"] for p in role_perms}
         except Exception as e:
-            return json.dumps({
-                "error": f"Не удалось получить права роли '{role_name}': {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Не удалось получить права роли '{role_name}': {e}"}, ensure_ascii=False)
 
         # 6. Определяем, какие datasource_access нужно добавить
         already_have = []
@@ -586,41 +577,34 @@ def register_security_tools(mcp):
         for ds_id, perm_id in ds_perms.items():
             ds_name = dataset_names.get(ds_id, f"id:{ds_id}")
             if perm_id in current_perm_ids:
-                already_have.append(
-                    f"  ✓ {ds_name} (dataset={ds_id}, perm={perm_id})"
-                )
+                already_have.append(f"  ✓ {ds_name} (dataset={ds_id}, perm={perm_id})")
             else:
-                to_add.append({
-                    "dataset_id": ds_id,
-                    "dataset_name": ds_name,
-                    "perm_id": perm_id,
-                })
+                to_add.append(
+                    {
+                        "dataset_id": ds_id,
+                        "dataset_name": ds_name,
+                        "perm_id": perm_id,
+                    }
+                )
 
         # 7. Проверяем RLS на датасетах
         rls_warnings: list[str] = []
         try:
-            rls_resp = await client.get_all(
-                "/api/v1/rowlevelsecurity/", params={}
-            )
+            rls_resp = await client.get_all("/api/v1/rowlevelsecurity/", params={})
             all_rls = rls_resp.get("result", [])
             if isinstance(all_rls, str):
                 all_rls = json.loads(all_rls)
 
             for ds_id in dataset_ids:
                 ds_name = dataset_names.get(ds_id, f"id:{ds_id}")
-                has_rls = any(
-                    ds_id in [t.get("id", -1) for t in rls.get("tables", [])]
-                    for rls in all_rls
-                )
+                has_rls = any(ds_id in [t.get("id", -1) for t in rls.get("tables", [])] for rls in all_rls)
                 if not has_rls:
                     rls_warnings.append(
                         f"  ⚠ {ds_name} (id:{ds_id}) — нет RLS-правил. "
                         f"Пользователи с ролью '{role_name}' увидят ВСЕ данные."
                     )
         except Exception:
-            rls_warnings.append(
-                "  ⚠ Не удалось проверить RLS-правила"
-            )
+            rls_warnings.append("  ⚠ Не удалось проверить RLS-правила")
 
         # 8. Формируем отчёт
         report_lines = [
@@ -639,14 +623,11 @@ def register_security_tools(mcp):
             report_lines.append("Будет добавлено:")
             for item in to_add:
                 report_lines.append(
-                    f"  + {item['dataset_name']} "
-                    f"(dataset={item['dataset_id']}, perm={item['perm_id']})"
+                    f"  + {item['dataset_name']} (dataset={item['dataset_id']}, perm={item['perm_id']})"
                 )
             report_lines.append("")
         else:
-            report_lines.append(
-                "Все datasource_access уже есть в роли — добавлять нечего."
-            )
+            report_lines.append("Все datasource_access уже есть в роли — добавлять нечего.")
             report_lines.append("")
 
         if rls_warnings:
@@ -662,47 +643,54 @@ def register_security_tools(mcp):
 
         # 9. Применяем или показываем dry-run
         if not to_add:
-            return json.dumps({
-                "result": "\n".join(report_lines),
-                "status": "nothing_to_do",
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "result": "\n".join(report_lines),
+                    "status": "nothing_to_do",
+                },
+                ensure_ascii=False,
+            )
 
         if not confirm_grant:
-            report_lines.append(
-                "Передайте confirm_grant=True для применения изменений."
+            report_lines.append("Передайте confirm_grant=True для применения изменений.")
+            return json.dumps(
+                {
+                    "result": "\n".join(report_lines),
+                    "status": "dry_run",
+                },
+                ensure_ascii=False,
             )
-            return json.dumps({
-                "result": "\n".join(report_lines),
-                "status": "dry_run",
-            }, ensure_ascii=False)
 
         # Применяем: текущие права + новые datasource_access
-        new_perm_ids = sorted(
-            current_perm_ids | {item["perm_id"] for item in to_add}
-        )
+        new_perm_ids = sorted(current_perm_ids | {item["perm_id"] for item in to_add})
         try:
             await client.post(
                 f"/api/v1/security/roles/{role_id}/permissions",
                 json_data={"permission_view_menu_ids": new_perm_ids},
             )
         except Exception as e:
-            return json.dumps({
-                "error": f"Ошибка при обновлении прав роли: {e}",
-                "report": "\n".join(report_lines),
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": f"Ошибка при обновлении прав роли: {e}",
+                    "report": "\n".join(report_lines),
+                },
+                ensure_ascii=False,
+            )
 
         added_names = [item["dataset_name"] for item in to_add]
         report_lines.append(
-            f"✓ Готово! Добавлено {len(to_add)} datasource_access "
-            f"в роль '{role_name}': {', '.join(added_names)}"
+            f"✓ Готово! Добавлено {len(to_add)} datasource_access в роль '{role_name}': {', '.join(added_names)}"
         )
 
-        return json.dumps({
-            "result": "\n".join(report_lines),
-            "status": "applied",
-            "added_count": len(to_add),
-            "total_permissions": len(new_perm_ids),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "result": "\n".join(report_lines),
+                "status": "applied",
+                "added_count": len(to_add),
+                "total_permissions": len(new_perm_ids),
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_dashboard_revoke_role_access(
@@ -730,74 +718,58 @@ def register_security_tools(mcp):
             dash = dash_info.get("result", {})
             dash_title = dash.get("dashboard_title", f"ID={dashboard_id}")
         except Exception as e:
-            return json.dumps({
-                "error": f"Дашборд ID={dashboard_id} не найден: {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Дашборд ID={dashboard_id} не найден: {e}"}, ensure_ascii=False)
 
         # 2. Проверяем роль
         try:
             role_info = await client.get(f"/api/v1/security/roles/{role_id}")
             role_name = role_info.get("result", {}).get("name", f"ID={role_id}")
         except Exception as e:
-            return json.dumps({
-                "error": f"Роль ID={role_id} не найдена: {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Роль ID={role_id} не найдена: {e}"}, ensure_ascii=False)
 
         # 3. Получаем датасеты дашборда
         try:
-            ds_resp = await client.get(
-                f"/api/v1/dashboard/{dashboard_id}/datasets"
-            )
+            ds_resp = await client.get(f"/api/v1/dashboard/{dashboard_id}/datasets")
             datasets = ds_resp.get("result", [])
         except Exception as e:
-            return json.dumps({
-                "error": f"Не удалось получить датасеты дашборда: {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Не удалось получить датасеты дашборда: {e}"}, ensure_ascii=False)
 
         if not datasets:
-            return json.dumps({
-                "error": f"Дашборд '{dash_title}' не содержит датасетов."
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Дашборд '{dash_title}' не содержит датасетов."}, ensure_ascii=False)
 
         dataset_ids = {ds["id"] for ds in datasets}
-        dataset_names = {
-            ds["id"]: f"{ds.get('schema', '?')}.{ds.get('table_name', '?')}"
-            for ds in datasets
-        }
+        dataset_names = {ds["id"]: f"{ds.get('schema', '?')}.{ds.get('table_name', '?')}" for ds in datasets}
 
         # 4. Находим datasource_access permission_view_menu_id
         ds_perms = await _find_datasource_permissions(client, dataset_ids)
         perm_ids_to_remove = set(ds_perms.values())
 
         if not perm_ids_to_remove:
-            return json.dumps({
-                "error": "Не найдены datasource_access для датасетов дашборда."
-            }, ensure_ascii=False)
+            return json.dumps({"error": "Не найдены datasource_access для датасетов дашборда."}, ensure_ascii=False)
 
         # 5. Получаем текущие права роли
         try:
-            role_perms_resp = await client.get(
-                f"/api/v1/security/roles/{role_id}/permissions/"
-            )
+            role_perms_resp = await client.get(f"/api/v1/security/roles/{role_id}/permissions/")
             role_perms = role_perms_resp.get("result", [])
             if isinstance(role_perms, str):
                 role_perms = json.loads(role_perms)
             current_perm_ids = {p["id"] for p in role_perms}
         except Exception as e:
-            return json.dumps({
-                "error": f"Не удалось получить права роли: {e}"
-            }, ensure_ascii=False)
+            return json.dumps({"error": f"Не удалось получить права роли: {e}"}, ensure_ascii=False)
 
         # Какие реально удаляем (пересечение)
         actual_remove = perm_ids_to_remove & current_perm_ids
         if not actual_remove:
-            return json.dumps({
-                "result": (
-                    f"Роль '{role_name}' не имеет datasource_access "
-                    f"к датасетам дашборда '{dash_title}' — отзывать нечего."
-                ),
-                "status": "nothing_to_do",
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "result": (
+                        f"Роль '{role_name}' не имеет datasource_access "
+                        f"к датасетам дашборда '{dash_title}' — отзывать нечего."
+                    ),
+                    "status": "nothing_to_do",
+                },
+                ensure_ascii=False,
+            )
 
         # 6. Формируем отчёт
         report_lines = [
@@ -809,19 +781,18 @@ def register_security_tools(mcp):
         for ds_id, perm_id in ds_perms.items():
             if perm_id in actual_remove:
                 ds_name = dataset_names.get(ds_id, f"id:{ds_id}")
-                report_lines.append(
-                    f"  - {ds_name} (dataset={ds_id}, perm={perm_id})"
-                )
+                report_lines.append(f"  - {ds_name} (dataset={ds_id}, perm={perm_id})")
         report_lines.append("")
 
         if not confirm_revoke:
-            report_lines.append(
-                "Передайте confirm_revoke=True для применения."
+            report_lines.append("Передайте confirm_revoke=True для применения.")
+            return json.dumps(
+                {
+                    "result": "\n".join(report_lines),
+                    "status": "dry_run",
+                },
+                ensure_ascii=False,
             )
-            return json.dumps({
-                "result": "\n".join(report_lines),
-                "status": "dry_run",
-            }, ensure_ascii=False)
 
         # 7. Применяем
         new_perm_ids = sorted(current_perm_ids - actual_remove)
@@ -831,20 +802,23 @@ def register_security_tools(mcp):
                 json_data={"permission_view_menu_ids": new_perm_ids},
             )
         except Exception as e:
-            return json.dumps({
-                "error": f"Ошибка при обновлении прав роли: {e}",
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": f"Ошибка при обновлении прав роли: {e}",
+                },
+                ensure_ascii=False,
+            )
 
-        report_lines.append(
-            f"✓ Готово! Удалено {len(actual_remove)} datasource_access "
-            f"из роли '{role_name}'."
+        report_lines.append(f"✓ Готово! Удалено {len(actual_remove)} datasource_access из роли '{role_name}'.")
+
+        return json.dumps(
+            {
+                "result": "\n".join(report_lines),
+                "status": "applied",
+                "removed_count": len(actual_remove),
+            },
+            ensure_ascii=False,
         )
-
-        return json.dumps({
-            "result": "\n".join(report_lines),
-            "status": "applied",
-            "removed_count": len(actual_remove),
-        }, ensure_ascii=False)
 
     # === Row Level Security (RLS) ===
 
@@ -918,15 +892,18 @@ def register_security_tools(mcp):
         """
         # Предупреждение для Base filter_type
         if filter_type == "Base":
-            return json.dumps({
-                "error": (
-                    "ОТКЛОНЕНО: filter_type='Base' применяется ко ВСЕМ пользователям "
-                    "и может переопределить существующие Regular-правила (deny-by-default). "
-                    "В архитектуре этого проекта используется только 'Regular'. "
-                    "Если вы уверены — используйте superset_rls_create_unsafe "
-                    "или измените filter_type на 'Regular'."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        "ОТКЛОНЕНО: filter_type='Base' применяется ко ВСЕМ пользователям "
+                        "и может переопределить существующие Regular-правила (deny-by-default). "
+                        "В архитектуре этого проекта используется только 'Regular'. "
+                        "Если вы уверены — используйте superset_rls_create_unsafe "
+                        "или измените filter_type на 'Regular'."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         payload = {
             "name": name,
@@ -939,9 +916,7 @@ def register_security_tools(mcp):
             payload["group_key"] = group_key
         if description is not None:
             payload["description"] = description
-        result = await client.post(
-            "/api/v1/rowlevelsecurity/", json_data=payload
-        )
+        result = await client.post("/api/v1/rowlevelsecurity/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -980,15 +955,18 @@ def register_security_tools(mcp):
         if (roles is not None) != (tables is not None):
             missing = "tables" if tables is None else "roles"
             provided = "roles" if tables is None else "tables"
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: передан только {provided} без {missing}. "
-                    f"Superset PUT API ЗАМЕНЯЕТ оба поля — если не передать {missing}, "
-                    f"оно будет затёрто пустым списком. "
-                    f"Сначала получите текущие значения через rls_list, "
-                    f"затем передайте И roles, И tables одновременно."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: передан только {provided} без {missing}. "
+                        f"Superset PUT API ЗАМЕНЯЕТ оба поля — если не передать {missing}, "
+                        f"оно будет затёрто пустым списком. "
+                        f"Сначала получите текущие значения через rls_list, "
+                        f"затем передайте И roles, И tables одновременно."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         payload = {}
         if name is not None:
@@ -1005,9 +983,7 @@ def register_security_tools(mcp):
             payload["group_key"] = group_key
         if description is not None:
             payload["description"] = description
-        result = await client.put(
-            f"/api/v1/rowlevelsecurity/{rls_id}", json_data=payload
-        )
+        result = await client.put(f"/api/v1/rowlevelsecurity/{rls_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -1034,14 +1010,17 @@ def register_security_tools(mcp):
                 tables = [t.get("table_name", "?") for t in rls.get("tables", [])]
             except Exception:
                 name, clause, roles, tables = f"ID={rls_id}", "?", [], []
-            return json.dumps({
-                "error": (
-                    f"ОТКЛОНЕНО: удаление RLS-правила '{name}' "
-                    f"(clause: '{clause}', роли: {roles}, датасеты: {tables}). "
-                    f"Удаление изменит доступ к данным для указанных ролей. "
-                    f"Передайте confirm_delete=True для подтверждения."
-                )
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "error": (
+                        f"ОТКЛОНЕНО: удаление RLS-правила '{name}' "
+                        f"(clause: '{clause}', роли: {roles}, датасеты: {tables}). "
+                        f"Удаление изменит доступ к данным для указанных ролей. "
+                        f"Передайте confirm_delete=True для подтверждения."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.delete(f"/api/v1/rowlevelsecurity/{rls_id}")
         return json.dumps(result, ensure_ascii=False)

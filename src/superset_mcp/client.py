@@ -1,7 +1,7 @@
 """HTTP-клиент для Superset REST API с автоматической аутентификацией."""
 
-import base64
 from typing import Any
+
 import httpx
 
 from superset_mcp.auth import AuthManager
@@ -77,15 +77,12 @@ class SupersetClient:
             error_detail = ""
             try:
                 error_body = resp.json()
-                error_detail = error_body.get("message", "") or error_body.get(
-                    "errors", str(error_body)
-                )
+                error_detail = error_body.get("message", "") or error_body.get("errors", str(error_body))
             except Exception:
                 error_detail = resp.text[:500]
             raise SupersetAPIError(
                 status_code=resp.status_code,
-                detail=f"Superset API {method} {endpoint}: "
-                f"{resp.status_code} — {error_detail}",
+                detail=f"Superset API {method} {endpoint}: {resp.status_code} — {error_detail}",
             )
 
         if resp.status_code == 204:
@@ -93,36 +90,29 @@ class SupersetClient:
 
         return resp.json()
 
-    async def get(
-        self, endpoint: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def get(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         return await self._request("GET", endpoint, params=params)
 
-    async def post(
-        self, endpoint: str, json_data: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def post(self, endpoint: str, json_data: dict[str, Any] | None = None) -> dict[str, Any]:
         return await self._request("POST", endpoint, json_data=json_data)
 
-    async def put(
-        self, endpoint: str, json_data: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def put(self, endpoint: str, json_data: dict[str, Any] | None = None) -> dict[str, Any]:
         return await self._request("PUT", endpoint, json_data=json_data)
 
-    async def delete(
-        self, endpoint: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def delete(self, endpoint: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         return await self._request("DELETE", endpoint, params=params)
 
-    async def get_raw(
-        self, endpoint: str, params: dict[str, Any] | None = None
-    ) -> bytes:
+    async def get_raw(self, endpoint: str, params: dict[str, Any] | None = None) -> bytes:
         """GET-запрос с возвратом сырых байтов (для export endpoints)."""
         url = f"{self.base_url}{endpoint}"
         headers = await self._get_headers(need_csrf=False)
         headers.pop("Content-Type", None)
         headers["Accept"] = "*/*"
         resp = await self._client.request(
-            method="GET", url=url, headers=headers, params=params,
+            method="GET",
+            url=url,
+            headers=headers,
+            params=params,
         )
         if resp.status_code == 401:
             self.auth.invalidate()
@@ -130,7 +120,10 @@ class SupersetClient:
             headers.pop("Content-Type", None)
             headers["Accept"] = "*/*"
             resp = await self._client.request(
-                method="GET", url=url, headers=headers, params=params,
+                method="GET",
+                url=url,
+                headers=headers,
+                params=params,
             )
         if resp.status_code >= 400:
             raise SupersetAPIError(
@@ -140,7 +133,10 @@ class SupersetClient:
         return resp.content
 
     async def post_form(
-        self, endpoint: str, files: dict, data: dict | None = None,
+        self,
+        endpoint: str,
+        files: dict,
+        data: dict | None = None,
     ) -> dict[str, Any]:
         """POST multipart/form-data (для import endpoints)."""
         url = f"{self.base_url}{endpoint}"
@@ -152,7 +148,10 @@ class SupersetClient:
             "Referer": self.base_url,
         }
         resp = await self._client.post(
-            url=url, headers=headers, files=files, data=data or {},
+            url=url,
+            headers=headers,
+            files=files,
+            data=data or {},
         )
         if resp.status_code == 401:
             self.auth.invalidate()
@@ -161,15 +160,16 @@ class SupersetClient:
             headers["Authorization"] = f"Bearer {token}"
             headers["X-CSRFToken"] = csrf
             resp = await self._client.post(
-                url=url, headers=headers, files=files, data=data or {},
+                url=url,
+                headers=headers,
+                files=files,
+                data=data or {},
             )
         if resp.status_code >= 400:
             error_detail = ""
             try:
                 error_body = resp.json()
-                error_detail = error_body.get("message", "") or error_body.get(
-                    "errors", str(error_body)
-                )
+                error_detail = error_body.get("message", "") or error_body.get("errors", str(error_body))
             except Exception:
                 error_detail = resp.text[:500]
             raise SupersetAPIError(
@@ -181,9 +181,7 @@ class SupersetClient:
         return resp.json()
 
     @staticmethod
-    def _build_rison_q(
-        page: int, page_size: int, existing_q: str | None = None
-    ) -> str:
+    def _build_rison_q(page: int, page_size: int, existing_q: str | None = None) -> str:
         """Формирует RISON-строку с пагинацией, мержа с существующим q-фильтром.
 
         Superset игнорирует page/page_size как query-параметры —
@@ -240,9 +238,7 @@ class SupersetClient:
         existing_q = (params or {}).get("q")
 
         while page < max_pages:
-            page_params = {
-                k: v for k, v in (params or {}).items() if k != "q"
-            }
+            page_params = {k: v for k, v in (params or {}).items() if k != "q"}
             page_params["q"] = self._build_rison_q(page, page_size, existing_q)
 
             data = await self.get(endpoint, params=page_params)
