@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-03-11
+
+### Changed
+
+- Updated GitHub Actions to latest versions via Dependabot:
+  - `actions/upload-artifact` v6 → v7
+  - `actions/download-artifact` v6 → v8
+  - `github/codeql-action` v3 → v4
+
 ## [0.2.1] - 2025-03-11
 
 ### Added

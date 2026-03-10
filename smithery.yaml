@@ -1,0 +1,40 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - supersetBaseUrl
+      - supersetUsername
+      - supersetPassword
+    properties:
+      supersetBaseUrl:
+        type: string
+        description: The URL of your Apache Superset instance (e.g. https://superset.example.com)
+      supersetUsername:
+        type: string
+        description: Username for Superset authentication
+      supersetPassword:
+        type: string
+        description: Password for Superset authentication
+      supersetAuthProvider:
+        type: string
+        default: db
+        description: "Authentication provider: db, ldap, or oauth"
+  commandFunction:
+    |-
+    (config) => ({
+      command: 'uvx',
+      args: ['mcp-superset', '--transport', 'stdio'],
+      env: {
+        SUPERSET_BASE_URL: config.supersetBaseUrl,
+        SUPERSET_USERNAME: config.supersetUsername,
+        SUPERSET_PASSWORD: config.supersetPassword,
+        SUPERSET_AUTH_PROVIDER: config.supersetAuthProvider || 'db'
+      }
+    })
+  exampleConfig:
+    supersetBaseUrl: https://superset.example.com
+    supersetUsername: admin
+    supersetPassword: admin
