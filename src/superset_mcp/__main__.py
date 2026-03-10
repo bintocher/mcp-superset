@@ -1,4 +1,4 @@
-"""Entry point: python -m superset_mcp or `superset-mcp` CLI."""
+"""Entry point: python -m superset_mcp or `mcp-superset` CLI."""
 
 import argparse
 import os
@@ -23,7 +23,7 @@ uvicorn.config.LOGGING_CONFIG["formatters"]["access"] = {
 def main():
     """Run the MCP server with CLI arguments."""
     parser = argparse.ArgumentParser(
-        prog="superset-mcp",
+        prog="mcp-superset",
         description="MCP server for managing Apache Superset",
     )
     parser.add_argument(

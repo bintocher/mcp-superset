@@ -1,11 +1,52 @@
-# superset-mcp
+# mcp-superset
 
-[![PyPI version](https://img.shields.io/pypi/v/superset-mcp.svg)](https://pypi.org/project/superset-mcp/)
+[![PyPI version](https://img.shields.io/pypi/v/mcp-superset.svg)](https://pypi.org/project/mcp-superset/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/bintocher/superset-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/bintocher/superset-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/bintocher/mcp-superset/actions/workflows/ci.yml/badge.svg)](https://github.com/bintocher/mcp-superset/actions/workflows/ci.yml)
 
 A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for [Apache Superset](https://superset.apache.org/). Gives AI assistants (Claude, GPT, etc.) full control over your Superset instance — dashboards, charts, datasets, SQL Lab, users, roles, RLS, and more — through 128+ tools.
+
+## Comparison with Other Superset MCP Servers
+
+| Feature | **mcp-superset** | [superset-mcp](https://github.com/aptro/superset-mcp) | [superset-mcp (Winding2020)](https://github.com/Winding2020/superset-mcp) | [superset-mcp-server](https://github.com/LiusCraft/superset-mcp-server) |
+|---------|:-:|:-:|:-:|:-:|
+| **Total tools** | **128+** | ~60 | ~31 | 4 |
+| Language | Python | Python | TypeScript | TypeScript |
+| Dashboard CRUD | 15 tools | 5 | 8 | - |
+| Dashboard native filters | **5 tools** | - | - | - |
+| Chart CRUD | 11 tools | 5 | 7 | - |
+| Database tools | 18 tools | 14 | 1 | 1 |
+| Dataset tools | 11 tools | 3 | 7 | - |
+| SQL Lab | 5 tools | 7 | 1 | 1 |
+| **Security (users/roles)** | **22 tools** | 2 | - | - |
+| **Row Level Security** | **5 tools** | - | - | - |
+| **Groups** | **9 tools** | - | - | - |
+| **Permissions audit** | **yes** | - | - | - |
+| **Dashboard access grant/revoke** | **yes** | - | - | - |
+| **Auto datasource_access sync** | **yes** | - | - | - |
+| Reports & annotations | 10 tools | - | - | - |
+| Tags | 7 tools | 7 | - | - |
+| Asset export/import | yes | - | - | - |
+| **Safety: confirmation flags** | **14 types** | - | - | - |
+| **Safety: DDL/DML blocking** | **yes** | - | - | - |
+| **Safety: system role protection** | **yes** | - | - | - |
+| Transport | HTTP, SSE, stdio | stdio | stdio | stdio |
+| Auth method | JWT + auto-refresh + CSRF | Username/password + token file | Username/password or token | LDAP |
+| Superset versions | 6.0.1 | 4.1.1 | not specified | not specified |
+| CLI with args | `--host --port --transport` | - | - | - |
+| PyPI package | `mcp-superset` | `superset-mcp` | `superset-mcp` (npm) | - |
+| uvx support | **yes** | - | - | - |
+| License | MIT | MIT | - | Apache 2.0 |
+| GitHub stars | new | 170 | 21 | 5 |
+
+**Key differentiators:**
+- Only MCP server with **full security management** (users, roles, RLS, groups, permissions audit)
+- Only one with **built-in safety validations** (confirmation flags, DDL/DML blocking)
+- Only one with **dashboard native filter management**
+- Only one with **automatic datasource_access synchronization**
+- Only one with **multiple transport options** (HTTP, SSE, stdio)
+- Only one with **configurable CLI** (`--host`, `--port`, `--transport`, `--env-file`)
 
 ## Features
 
@@ -17,7 +58,7 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - **SQL Lab** — query execution, formatting, cost estimation, results & CSV export
 - **Security** — users, roles, permissions, Row Level Security (RLS), groups
 - **Access control automation** — grant/revoke dashboard access with automatic datasource permission sync
-- **Audit** — comprehensive permissions matrix (user × dashboards × datasets × RLS)
+- **Audit** — comprehensive permissions matrix (user x dashboards x datasets x RLS)
 - **Tags, reports, annotations, saved queries** — full CRUD
 - **Asset export/import** — full instance backup and restore
 - **Built-in safety** — confirmation flags for destructive operations, DDL/DML blocking in SQL Lab
@@ -30,15 +71,18 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 
 ```bash
 # From PyPI
-pip install superset-mcp
+pip install mcp-superset
 
-# Or with uv (recommended)
-uv pip install superset-mcp
+# With uv (recommended)
+uv pip install mcp-superset
+
+# Run without installing (uvx)
+uvx mcp-superset
 ```
 
 ### Configuration
 
-Create a `.env` file or set environment variables:
+Create a `.env` file in the current directory, or set environment variables:
 
 ```env
 # Required
@@ -56,20 +100,26 @@ SUPERSET_MCP_TRANSPORT=streamable-http  # streamable-http (default), sse, or std
 ### Running
 
 ```bash
-# Using CLI (installed via pip)
-superset-mcp
+# Using CLI (after pip install)
+mcp-superset
+
+# Run without installing
+uvx mcp-superset
 
 # Using Python module
 python -m superset_mcp
 
+# With uv from source
+uv run mcp-superset
+
 # With custom settings
-superset-mcp --host 0.0.0.0 --port 9000 --transport sse
+mcp-superset --host 0.0.0.0 --port 9000 --transport sse
 
 # With custom .env file
-superset-mcp --env-file /path/to/.env
+mcp-superset --env-file /path/to/.env
 
-# Using stdio transport (for direct MCP client integration)
-superset-mcp --transport stdio
+# Using stdio transport (for Claude Desktop, Cursor, etc.)
+mcp-superset --transport stdio
 ```
 
 ### CLI Options
@@ -86,7 +136,7 @@ superset-mcp --transport stdio
 
 #### Claude Code
 
-Add to your `.mcp.json`:
+Add to your project's `.mcp.json`:
 
 ```json
 {
@@ -99,6 +149,8 @@ Add to your `.mcp.json`:
 }
 ```
 
+Then start the server: `mcp-superset` or `uvx mcp-superset`.
+
 #### Claude Desktop
 
 Add to `claude_desktop_config.json`:
@@ -107,8 +159,26 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "superset": {
-      "command": "superset-mcp",
-      "args": ["--transport", "stdio"],
+      "command": "uvx",
+      "args": ["mcp-superset", "--transport", "stdio"],
+      "env": {
+        "SUPERSET_BASE_URL": "https://superset.example.com",
+        "SUPERSET_USERNAME": "admin",
+        "SUPERSET_PASSWORD": "your_password"
+      }
+    }
+  }
+}
+```
+
+#### Cursor / Windsurf
+
+```json
+{
+  "mcpServers": {
+    "superset": {
+      "command": "uvx",
+      "args": ["mcp-superset", "--transport", "stdio"],
       "env": {
         "SUPERSET_BASE_URL": "https://superset.example.com",
         "SUPERSET_USERNAME": "admin",
@@ -124,7 +194,7 @@ Add to `claude_desktop_config.json`:
 Any MCP-compatible client can connect via:
 - **Streamable HTTP**: `http://<host>:<port>/mcp`
 - **SSE**: `http://<host>:<port>/sse`
-- **stdio**: pipe to `superset-mcp --transport stdio`
+- **stdio**: pipe to `mcp-superset --transport stdio`
 
 ## Available Tools (128+)
 
@@ -385,7 +455,7 @@ superset-mcp/
 
 ## Superset Compatibility
 
-- **Tested with**: Apache Superset 4.x, 5.x, 6.0.1
+- **Tested with**: Apache Superset 6.0.1
 - **Authentication**: JWT (recommended) — API Key (`sst_*`) is not implemented in Superset
 - **Required Superset user**: Admin role (for full API access)
 
@@ -409,7 +479,7 @@ FAB_API_MAX_PAGE_SIZE = 100
 ### Setup
 
 ```bash
-git clone https://github.com/bintocher/superset-mcp.git
+git clone https://github.com/bintocher/mcp-superset.git
 cd superset-mcp
 
 # Create virtual environment and install in editable mode
@@ -428,7 +498,7 @@ cp .env.example .env
 uv run python -m superset_mcp
 
 # Or with CLI
-uv run superset-mcp --port 8001
+uv run mcp-superset --port 8001
 ```
 
 ### Running Tests

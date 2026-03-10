@@ -1,13 +1,53 @@
-# superset-mcp
+# mcp-superset
 
-[![PyPI version](https://img.shields.io/pypi/v/superset-mcp.svg)](https://pypi.org/project/superset-mcp/)
+[![PyPI version](https://img.shields.io/pypi/v/mcp-superset.svg)](https://pypi.org/project/mcp-superset/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/bintocher/superset-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/bintocher/superset-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/bintocher/mcp-superset/actions/workflows/ci.yml/badge.svg)](https://github.com/bintocher/mcp-superset/actions/workflows/ci.yml)
 
 [English](README.md) | **Русский**
 
 Полнофункциональный [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) сервер для [Apache Superset](https://superset.apache.org/). Предоставляет AI-ассистентам (Claude, GPT и др.) полный контроль над инстансом Superset — дашборды, графики, датасеты, SQL Lab, пользователи, роли, RLS и многое другое — через 128+ инструментов.
+
+## Сравнение с другими MCP-серверами для Superset
+
+| Возможность | **mcp-superset** | [superset-mcp](https://github.com/aptro/superset-mcp) | [superset-mcp (Winding2020)](https://github.com/Winding2020/superset-mcp) | [superset-mcp-server](https://github.com/LiusCraft/superset-mcp-server) |
+|-------------|:-:|:-:|:-:|:-:|
+| **Всего инструментов** | **128+** | ~60 | ~31 | 4 |
+| Язык | Python | Python | TypeScript | TypeScript |
+| Дашборды CRUD | 15 | 5 | 8 | - |
+| Нативные фильтры | **5** | - | - | - |
+| Графики CRUD | 11 | 5 | 7 | - |
+| Базы данных | 18 | 14 | 1 | 1 |
+| Датасеты | 11 | 3 | 7 | - |
+| SQL Lab | 5 | 7 | 1 | 1 |
+| **Безопасность (пользователи/роли)** | **22** | 2 | - | - |
+| **Row Level Security** | **5** | - | - | - |
+| **Группы** | **9** | - | - | - |
+| **Аудит прав** | **да** | - | - | - |
+| **Grant/revoke доступа** | **да** | - | - | - |
+| **Авто-синхр. datasource_access** | **да** | - | - | - |
+| Отчёты и аннотации | 10 | - | - | - |
+| Теги | 7 | 7 | - | - |
+| Экспорт/импорт ассетов | да | - | - | - |
+| **Защита: флаги подтверждения** | **14 типов** | - | - | - |
+| **Защита: блокировка DDL/DML** | **да** | - | - | - |
+| **Защита: системные роли** | **да** | - | - | - |
+| Транспорт | HTTP, SSE, stdio | stdio | stdio | stdio |
+| Аутентификация | JWT + авто-refresh + CSRF | Username/password + файл токена | Username/password или токен | LDAP |
+| Версии Superset | 6.0.1 | 4.1.1 | не указано | не указано |
+| CLI с параметрами | `--host --port --transport` | - | - | - |
+| PyPI | `mcp-superset` | `superset-mcp` | `superset-mcp` (npm) | - |
+| uvx | **да** | - | - | - |
+| Лицензия | MIT | MIT | - | Apache 2.0 |
+
+**Ключевые отличия:**
+- Единственный MCP-сервер с **полным управлением безопасностью** (пользователи, роли, RLS, группы, аудит прав)
+- Единственный с **встроенной защитой** (флаги подтверждения, блокировка DDL/DML)
+- Единственный с **управлением нативными фильтрами дашбордов**
+- Единственный с **автоматической синхронизацией datasource_access**
+- Единственный с **несколькими транспортами** (HTTP, SSE, stdio)
+- Единственный с **настраиваемым CLI** (`--host`, `--port`, `--transport`, `--env-file`)
 
 ## Возможности
 
@@ -19,7 +59,7 @@
 - **SQL Lab** — выполнение запросов, форматирование, оценка стоимости, экспорт результатов
 - **Безопасность** — пользователи, роли, права, Row Level Security (RLS), группы
 - **Автоматизация доступа** — grant/revoke с автоматической синхронизацией datasource_access
-- **Аудит** — матрица прав доступа (пользователь × дашборды × датасеты × RLS)
+- **Аудит** — матрица прав доступа (пользователь x дашборды x датасеты x RLS)
 - **Теги, отчёты, аннотации, сохранённые запросы** — полный CRUD
 - **Экспорт/импорт ассетов** — полный бэкап и восстановление инстанса
 - **Встроенная защита** — подтверждения для деструктивных операций, блокировка DDL/DML в SQL Lab
@@ -32,15 +72,18 @@
 
 ```bash
 # Из PyPI
-pip install superset-mcp
+pip install mcp-superset
 
-# Или через uv (рекомендуется)
-uv pip install superset-mcp
+# Через uv (рекомендуется)
+uv pip install mcp-superset
+
+# Запуск без установки (uvx)
+uvx mcp-superset
 ```
 
 ### Конфигурация
 
-Создайте файл `.env` или установите переменные окружения:
+Создайте файл `.env` в текущей директории или установите переменные окружения:
 
 ```env
 # Обязательные
@@ -58,20 +101,26 @@ SUPERSET_MCP_TRANSPORT=streamable-http  # streamable-http (по умолчани
 ### Запуск
 
 ```bash
-# Через CLI (установленный из pip)
-superset-mcp
+# Через CLI (после pip install)
+mcp-superset
+
+# Запуск без установки
+uvx mcp-superset
 
 # Через Python-модуль
 python -m superset_mcp
 
+# Через uv из исходников
+uv run mcp-superset
+
 # С пользовательскими параметрами
-superset-mcp --host 0.0.0.0 --port 9000 --transport sse
+mcp-superset --host 0.0.0.0 --port 9000 --transport sse
 
 # С указанием .env файла
-superset-mcp --env-file /path/to/.env
+mcp-superset --env-file /path/to/.env
 
-# Через stdio (для прямого подключения MCP-клиента)
-superset-mcp --transport stdio
+# Через stdio (для Claude Desktop, Cursor и др.)
+mcp-superset --transport stdio
 ```
 
 ### Параметры CLI
@@ -88,7 +137,7 @@ superset-mcp --transport stdio
 
 #### Claude Code
 
-Добавьте в `.mcp.json`:
+Добавьте в `.mcp.json` проекта:
 
 ```json
 {
@@ -101,6 +150,8 @@ superset-mcp --transport stdio
 }
 ```
 
+Затем запустите сервер: `mcp-superset` или `uvx mcp-superset`.
+
 #### Claude Desktop
 
 Добавьте в `claude_desktop_config.json`:
@@ -109,8 +160,26 @@ superset-mcp --transport stdio
 {
   "mcpServers": {
     "superset": {
-      "command": "superset-mcp",
-      "args": ["--transport", "stdio"],
+      "command": "uvx",
+      "args": ["mcp-superset", "--transport", "stdio"],
+      "env": {
+        "SUPERSET_BASE_URL": "https://superset.example.com",
+        "SUPERSET_USERNAME": "admin",
+        "SUPERSET_PASSWORD": "your_password"
+      }
+    }
+  }
+}
+```
+
+#### Cursor / Windsurf
+
+```json
+{
+  "mcpServers": {
+    "superset": {
+      "command": "uvx",
+      "args": ["mcp-superset", "--transport", "stdio"],
       "env": {
         "SUPERSET_BASE_URL": "https://superset.example.com",
         "SUPERSET_USERNAME": "admin",
@@ -126,197 +195,11 @@ superset-mcp --transport stdio
 Любой MCP-совместимый клиент может подключиться через:
 - **Streamable HTTP**: `http://<host>:<port>/mcp`
 - **SSE**: `http://<host>:<port>/sse`
-- **stdio**: пайп к `superset-mcp --transport stdio`
+- **stdio**: пайп к `mcp-superset --transport stdio`
 
 ## Доступные инструменты (128+)
 
-### Дашборды (15 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_dashboard_list` | Список дашбордов с фильтрацией и пагинацией |
-| `superset_dashboard_get` | Получить дашборд по ID |
-| `superset_dashboard_create` | Создать новый дашборд |
-| `superset_dashboard_update` | Обновить свойства дашборда |
-| `superset_dashboard_delete` | Удалить дашборд (требует подтверждения) |
-| `superset_dashboard_copy` | Дублировать дашборд |
-| `superset_dashboard_publish` | Опубликовать дашборд |
-| `superset_dashboard_unpublish` | Снять публикацию дашборда |
-| `superset_dashboard_charts` | Список графиков в дашборде |
-| `superset_dashboard_datasets` | Список датасетов дашборда |
-| `superset_dashboard_export` | Экспортировать дашборд (ZIP, base64) |
-| `superset_dashboard_import` | Импортировать дашборд из ZIP |
-| `superset_dashboard_embedded_get` | Получить конфигурацию встраивания |
-| `superset_dashboard_embedded_set` | Включить режим встраивания |
-| `superset_dashboard_embedded_delete` | Выключить режим встраивания |
-
-### Фильтры дашбордов (5 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_dashboard_filter_list` | Список нативных фильтров дашборда |
-| `superset_dashboard_filter_add` | Добавить нативный фильтр (авто-генерация ID) |
-| `superset_dashboard_filter_update` | Обновить существующий фильтр |
-| `superset_dashboard_filter_delete` | Удалить фильтр (требует подтверждения) |
-| `superset_dashboard_filter_reset` | Удалить все фильтры (требует подтверждения) |
-
-### Графики (11 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_chart_list` | Список графиков с фильтрацией |
-| `superset_chart_get` | Получить график по ID |
-| `superset_chart_create` | Создать новый график |
-| `superset_chart_update` | Обновить свойства графика |
-| `superset_chart_delete` | Удалить график (требует подтверждения) |
-| `superset_chart_copy` | Дублировать график |
-| `superset_chart_data` | Выполнить запрос графика и получить данные |
-| `superset_chart_get_data` | Получить данные сохранённого графика |
-| `superset_chart_export` | Экспортировать график (ZIP, base64) |
-| `superset_chart_import` | Импортировать график из ZIP |
-| `superset_chart_cache_warmup` | Прогреть кэш графика |
-
-### Базы данных (18 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_database_list` | Список подключений к БД |
-| `superset_database_get` | Получить детали подключения |
-| `superset_database_create` | Зарегистрировать новое подключение |
-| `superset_database_update` | Обновить настройки подключения |
-| `superset_database_delete` | Удалить подключение (требует подтверждения) |
-| `superset_database_test_connection` | Проверить связь с БД |
-| `superset_database_schemas` | Список схем в БД |
-| `superset_database_tables` | Список таблиц в схеме |
-| `superset_database_catalogs` | Список каталогов |
-| `superset_database_connection_info` | Информация о строке подключения |
-| `superset_database_function_names` | Список доступных SQL-функций |
-| `superset_database_related_objects` | Найти графики/датасеты, использующие эту БД |
-| `superset_database_validate_sql` | Валидация синтаксиса SQL |
-| `superset_database_validate_parameters` | Валидация параметров подключения |
-| `superset_database_select_star` | Сгенерировать SELECT * для таблицы |
-| `superset_database_table_metadata` | Метаданные колонок и индексов таблицы |
-| `superset_database_export` | Экспортировать конфигурацию БД |
-| `superset_database_available_engines` | Список поддерживаемых СУБД |
-
-### Датасеты (11 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_dataset_list` | Список датасетов с фильтрацией |
-| `superset_dataset_get` | Получить детали датасета (колонки, метрики) |
-| `superset_dataset_create` | Создать датасет из таблицы или SQL-запроса |
-| `superset_dataset_update` | Обновить свойства датасета |
-| `superset_dataset_delete` | Удалить датасет (требует подтверждения) |
-| `superset_dataset_duplicate` | Дублировать датасет |
-| `superset_dataset_refresh_schema` | Обновить колонки из источника |
-| `superset_dataset_related_objects` | Найти графики, использующие датасет |
-| `superset_dataset_export` | Экспортировать датасет (ZIP) |
-| `superset_dataset_import` | Импортировать датасет из ZIP |
-| `superset_dataset_get_or_create` | Получить существующий или создать новый |
-
-### SQL Lab и запросы (13 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_sqllab_execute` | Выполнить SQL-запрос (только SELECT) |
-| `superset_sqllab_format_sql` | Форматировать SQL |
-| `superset_sqllab_results` | Получить результаты выполненного запроса |
-| `superset_sqllab_estimate_cost` | Оценить стоимость выполнения запроса |
-| `superset_sqllab_export_csv` | Экспортировать результаты в CSV |
-| `superset_query_list` | Список выполненных запросов |
-| `superset_query_get` | Получить детали и результаты запроса |
-| `superset_query_stop` | Остановить выполняющийся запрос |
-| `superset_saved_query_list` | Список сохранённых запросов |
-| `superset_saved_query_create` | Сохранить новый запрос |
-| `superset_saved_query_get` | Получить сохранённый запрос |
-| `superset_saved_query_update` | Обновить сохранённый запрос |
-| `superset_saved_query_delete` | Удалить сохранённый запрос (требует подтверждения) |
-
-### Безопасность и контроль доступа (22 инструмента)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_get_current_user` | Информация о текущем пользователе |
-| `superset_get_current_user_roles` | Роли текущего пользователя |
-| `superset_user_list` | Список пользователей с фильтрацией |
-| `superset_user_get` | Получить детали пользователя |
-| `superset_user_create` | Создать нового пользователя |
-| `superset_user_update` | Обновить свойства пользователя |
-| `superset_user_delete` | Удалить пользователя (требует подтверждения) |
-| `superset_role_list` | Список ролей |
-| `superset_role_get` | Получить детали роли |
-| `superset_role_create` | Создать новую роль |
-| `superset_role_update` | Обновить имя/описание роли |
-| `superset_role_delete` | Удалить роль (требует подтверждения, блокирует системные) |
-| `superset_permission_list` | Список всех доступных прав |
-| `superset_role_permissions_get` | Получить права роли |
-| `superset_role_permission_add` | Установить права роли (полная замена, требует подтверждения) |
-| `superset_dashboard_grant_role_access` | Выдать роли доступ к дашборду и его датасетам |
-| `superset_dashboard_revoke_role_access` | Отозвать доступ роли к датасетам дашборда |
-| `superset_rls_list` | Список RLS-правил |
-| `superset_rls_get` | Получить детали RLS-правила |
-| `superset_rls_create` | Создать RLS-правило |
-| `superset_rls_update` | Обновить RLS-правило (требует roles и tables одновременно) |
-| `superset_rls_delete` | Удалить RLS-правило (требует подтверждения) |
-
-### Группы (9 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_group_list` | Список групп |
-| `superset_group_get` | Получить детали группы |
-| `superset_group_create` | Создать новую группу |
-| `superset_group_update` | Обновить название группы |
-| `superset_group_delete` | Удалить группу |
-| `superset_group_add_users` | Добавить пользователей в группу |
-| `superset_group_remove_users` | Удалить пользователей из группы |
-| `superset_group_add_roles` | Добавить роли в группу |
-| `superset_group_remove_roles` | Удалить роли из группы |
-
-### Теги (7 инструментов)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_tag_list` | Список тегов |
-| `superset_tag_get` | Получить детали тега |
-| `superset_tag_create` | Создать тег (опционально привязать к объектам) |
-| `superset_tag_update` | Обновить тег |
-| `superset_tag_delete` | Удалить тег (требует подтверждения) |
-| `superset_tag_get_objects` | Список объектов, привязанных к тегу |
-| `superset_tag_bulk_create` | Создать несколько тегов |
-
-### Система и отчёты (21 инструмент)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_report_list` | Список расписаний отчётов |
-| `superset_report_get` | Получить детали отчёта |
-| `superset_report_create` | Создать расписание отчёта |
-| `superset_report_update` | Обновить отчёт |
-| `superset_report_delete` | Удалить отчёт (требует подтверждения) |
-| `superset_annotation_layer_list` | Список слоёв аннотаций |
-| `superset_annotation_layer_get` | Получить детали слоя |
-| `superset_annotation_layer_create` | Создать слой аннотаций |
-| `superset_annotation_layer_update` | Обновить слой аннотаций |
-| `superset_annotation_layer_delete` | Удалить слой (требует подтверждения) |
-| `superset_annotation_list` | Список аннотаций в слое |
-| `superset_annotation_get` | Получить детали аннотации |
-| `superset_annotation_create` | Создать аннотацию |
-| `superset_annotation_update` | Обновить аннотацию |
-| `superset_annotation_delete` | Удалить аннотацию (требует подтверждения) |
-| `superset_recent_activity` | Недавняя активность пользователей |
-| `superset_log_list` | Журнал аудита |
-| `superset_get_menu` | Структура меню Superset |
-| `superset_get_base_url` | Настроенный базовый URL Superset |
-| `superset_assets_export` | Экспортировать все ассеты Superset (ZIP) |
-| `superset_assets_import` | Импортировать ассеты из ZIP |
-
-### Аудит (1 инструмент)
-
-| Инструмент | Описание |
-|------------|----------|
-| `superset_permissions_audit` | Генерация матрицы прав доступа |
+Полный список инструментов — см. [README.md](README.md#available-tools-128) (English).
 
 ## Механизмы защиты
 
@@ -373,21 +256,21 @@ superset-mcp/
     └── tools/
         ├── __init__.py         # register_all_tools()
         ├── helpers.py          # Авто-синхронизация datasource_access
-        ├── dashboards.py       # Инструменты дашбордов + фильтров (20)
-        ├── charts.py           # Инструменты графиков (11)
-        ├── databases.py        # Инструменты БД (18)
-        ├── datasets.py         # Инструменты датасетов (11)
+        ├── dashboards.py       # Дашборды + фильтры (20)
+        ├── charts.py           # Графики (11)
+        ├── databases.py        # Базы данных (18)
+        ├── datasets.py         # Датасеты (11)
         ├── queries.py          # SQL Lab + сохранённые запросы (13)
         ├── security.py         # Пользователи, роли, права, RLS (22)
-        ├── groups.py           # Управление группами (9)
+        ├── groups.py           # Группы (9)
         ├── audit.py            # Аудит прав (1)
-        ├── tags.py             # Инструменты тегов (7)
+        ├── tags.py             # Теги (7)
         └── system.py           # Отчёты, аннотации, логи, ассеты (21)
 ```
 
 ## Совместимость с Superset
 
-- **Протестировано с**: Apache Superset 4.x, 5.x, 6.0.1
+- **Протестировано с**: Apache Superset 6.0.1
 - **Аутентификация**: JWT (рекомендуется) — API Key (`sst_*`) не реализован в Superset
 - **Требуемый пользователь**: роль Admin (для полного доступа к API)
 
@@ -411,7 +294,7 @@ FAB_API_MAX_PAGE_SIZE = 100
 ### Настройка окружения
 
 ```bash
-git clone https://github.com/bintocher/superset-mcp.git
+git clone https://github.com/bintocher/mcp-superset.git
 cd superset-mcp
 
 # Создать виртуальное окружение и установить в режиме разработки
@@ -430,7 +313,7 @@ cp .env.example .env
 uv run python -m superset_mcp
 
 # Или через CLI
-uv run superset-mcp --port 8001
+uv run mcp-superset --port 8001
 ```
 
 ### Запуск тестов

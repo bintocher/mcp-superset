@@ -1,5 +1,5 @@
 [project]
-name = "superset-mcp"
+name = "mcp-superset"
 version = "0.1.0"
 description = "MCP server for managing Apache Superset — dashboards, charts, datasets, SQL Lab, access control, and more"
 readme = "README.md"
@@ -45,13 +45,13 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/bintocher/superset-mcp"
-Repository = "https://github.com/bintocher/superset-mcp"
-Issues = "https://github.com/bintocher/superset-mcp/issues"
-Changelog = "https://github.com/bintocher/superset-mcp/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/bintocher/mcp-superset"
+Repository = "https://github.com/bintocher/mcp-superset"
+Issues = "https://github.com/bintocher/mcp-superset/issues"
+Changelog = "https://github.com/bintocher/mcp-superset/blob/main/CHANGELOG.md"
 
 [project.scripts]
-superset-mcp = "superset_mcp.__main__:main"
+mcp-superset = "superset_mcp.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
