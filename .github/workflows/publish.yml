@@ -22,6 +22,9 @@ jobs:
       - name: Set up Python 3.12
         run: uv python install 3.12
 
+      - name: Install dependencies
+        run: uv sync --extra dev
+
       - name: Build package
         run: uv build
 
@@ -39,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/superset-mcp
+      url: https://pypi.org/p/mcp-superset
 
     steps:
       - name: Download artifacts

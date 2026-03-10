@@ -25,7 +25,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra dev
 
       - name: Lint with ruff
         run: uv run ruff check src/
@@ -51,6 +51,9 @@ jobs:
 
       - name: Set up Python 3.12
         run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
 
       - name: Build package
         run: uv build
