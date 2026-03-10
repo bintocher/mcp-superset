@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.bintocher/mcp-superset",
+  "title": "MCP Superset",
+  "description": "Full-featured MCP server for Apache Superset — 135+ tools for dashboards, charts, datasets, SQL Lab, security (users, roles, RLS, groups), audit, and more. Built-in safety validations.",
+  "repository": {
+    "url": "https://github.com/bintocher/mcp-superset",
+    "source": "github"
+  },
+  "version": "0.2.3",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "mcp-superset",
+      "version": "0.2.3",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Base URL of your Apache Superset instance",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false,
+          "name": "SUPERSET_BASE_URL"
+        },
+        {
+          "description": "Superset username for authentication",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false,
+          "name": "SUPERSET_USERNAME"
+        },
+        {
+          "description": "Superset password for authentication",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "SUPERSET_PASSWORD"
+        }
+      ]
+    }
+  ]
+}
