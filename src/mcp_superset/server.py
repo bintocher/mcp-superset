@@ -5,7 +5,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
+from mcp_superset import __version__
 from mcp_superset.auth import AuthManager
 from mcp_superset.client import SupersetClient
 from mcp_superset.tools import register_all_tools
@@ -51,6 +54,18 @@ mcp = FastMCP(
 
 # Register all tools
 register_all_tools(mcp)
+
+
+# Health check endpoint (no auth, no Superset API calls)
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "ok",
+            "version": __version__,
+            "superset_url": SUPERSET_BASE_URL,
+        }
+    )
 
 
 if __name__ == "__main__":
