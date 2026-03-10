@@ -1,3 +1,3 @@
 """MCP server for managing Apache Superset."""
 
-__version__ = "0.2.2"
+__version__ = "0.2.4"

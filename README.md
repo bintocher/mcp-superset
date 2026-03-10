@@ -3,9 +3,19 @@
 <!-- mcp-name: io.github.bintocher/mcp-superset -->
 
 [![PyPI version](https://img.shields.io/pypi/v/mcp-superset.svg)](https://pypi.org/project/mcp-superset/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/mcp-superset.svg)](https://pypi.org/project/mcp-superset/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/bintocher/mcp-superset/actions/workflows/ci.yml/badge.svg)](https://github.com/bintocher/mcp-superset/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/bintocher/mcp-superset/actions/workflows/codeql.yml/badge.svg)](https://github.com/bintocher/mcp-superset/actions/workflows/codeql.yml)
+
+[![Superset 6.0.1](https://img.shields.io/badge/Superset-6.0.1-orange.svg)](https://superset.apache.org/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
+[![Typed](https://img.shields.io/badge/typed-py.typed-blue.svg)](https://peps.python.org/pep-0561/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Tools: 128+](https://img.shields.io/badge/MCP_tools-128%2B-brightgreen.svg)](#available-tools-128)
+[![GitHub stars](https://img.shields.io/github/stars/bintocher/mcp-superset.svg?style=social)](https://github.com/bintocher/mcp-superset)
 
 A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for [Apache Superset](https://superset.apache.org/). Gives AI assistants (Claude, GPT, etc.) full control over your Superset instance — dashboards, charts, datasets, SQL Lab, users, roles, RLS, and more — through 128+ tools.
 
