@@ -77,6 +77,10 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - **JWT authentication** with automatic token refresh and CSRF handling
 - **Streamable HTTP, SSE, and stdio transports**
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/bintocher-mcp-superset).
+
 ## Quick Start
 
 ### Installation
