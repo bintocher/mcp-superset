@@ -12,18 +12,18 @@
 [![Typed](https://img.shields.io/badge/typed-py.typed-blue.svg)](https://peps.python.org/pep-0561/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Tools: 128+](https://img.shields.io/badge/MCP_tools-128%2B-brightgreen.svg)](#available-tools-128)
+[![Tools: 137](https://img.shields.io/badge/MCP_tools-128%2B-brightgreen.svg)](#available-tools-128)
 [![GitHub stars](https://img.shields.io/github/stars/bintocher/mcp-superset.svg?style=social)](https://github.com/bintocher/mcp-superset)
 
 [English](README.md) | **Русский**
 
-Полнофункциональный [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) сервер для [Apache Superset](https://superset.apache.org/). Предоставляет AI-ассистентам (Claude, GPT и др.) полный контроль над инстансом Superset — дашборды, графики, датасеты, SQL Lab, пользователи, роли, RLS и многое другое — через 128+ инструментов.
+Полнофункциональный [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) сервер для [Apache Superset](https://superset.apache.org/). Предоставляет AI-ассистентам (Claude, GPT и др.) полный контроль над инстансом Superset — дашборды, графики, датасеты, SQL Lab, пользователи, роли, RLS и многое другое — через 137 инструментов.
 
 ## Сравнение с другими MCP-серверами для Superset
 
 | Возможность | **mcp-superset** | [superset-mcp](https://github.com/aptro/superset-mcp) | [superset-mcp (Winding2020)](https://github.com/Winding2020/superset-mcp) | [superset-mcp-server](https://github.com/LiusCraft/superset-mcp-server) |
 |-------------|:-:|:-:|:-:|:-:|
-| **Всего инструментов** | **128+** | ~60 | ~31 | 4 |
+| **Всего инструментов** | **137** | 60 | 31 | 4 |
 | Язык | Python | Python | TypeScript | TypeScript |
 | Дашборды CRUD | 15 | 5 | 8 | - |
 | Нативные фильтры | **5** | - | - | - |
@@ -31,7 +31,7 @@
 | Базы данных | 18 | 14 | 1 | 1 |
 | Датасеты | 11 | 3 | 7 | - |
 | SQL Lab | 5 | 7 | 1 | 1 |
-| **Безопасность (пользователи/роли)** | **22** | 2 | - | - |
+| **Безопасность (пользователи/роли)** | **26** | 2 | - | - |
 | **Row Level Security** | **5** | - | - | - |
 | **Группы** | **9** | - | - | - |
 | **Аудит прав** | **да** | - | - | - |
@@ -61,7 +61,7 @@
 
 ## Возможности
 
-- **128+ MCP-инструментов**, покрывающих полный REST API Superset
+- **137 MCP-инструментов**, покрывающих полный REST API Superset
 - **Управление дашбордами** — CRUD, копирование, публикация, экспорт/импорт, встраивание, нативные фильтры
 - **Управление графиками** — CRUD, копирование, получение данных, экспорт/импорт, прогрев кэша
 - **Управление базами данных** — CRUD, проверка подключения, интроспекция схем/таблиц, валидация SQL
@@ -207,7 +207,7 @@ mcp-superset --transport stdio
 - **SSE**: `http://<host>:<port>/sse`
 - **stdio**: пайп к `mcp-superset --transport stdio`
 
-## Доступные инструменты (128+)
+## Доступные инструменты (137)
 
 Полный список инструментов — см. [README.md](README.md#available-tools-128) (English).
 

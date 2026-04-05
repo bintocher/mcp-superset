@@ -75,7 +75,10 @@ def register_audit_tools(mcp):
         For each user shows:
         - Groups they belong to
         - Effective roles (direct + inherited from groups)
-        - Access to each dashboard (1/0) — based on datasource_access
+        - Access to each dashboard (1/0/partial) — checks BOTH:
+          * Dashboard visibility (user's role in dashboard.roles, or roles empty)
+          * Data access (datasource_access to ALL datasets)
+          Values: 1 = full access, 0 = no access, "visible_no_data" = can open but charts fail
         - Access to each dataset (1/0)
         - Available regions via RLS
 
@@ -116,10 +119,12 @@ def register_audit_tools(mcp):
         datasets_resp = await client.get_all("/api/v1/dataset/")
         all_datasets = datasets_resp.get("result", [])
 
-        # Mapping dashboard -> datasets (via charts)
+        # Mapping dashboard -> datasets (via charts) and dashboard -> roles
         dashboard_datasets: dict[int, set[int]] = {}
+        dashboard_roles: dict[int, set[int]] = {}
         for db in all_dashboards:
             db_id = db["id"]
+            # Datasets
             try:
                 ds_resp = await client.get(f"/api/v1/dashboard/{db_id}/datasets")
                 ds_ids = set()
@@ -129,6 +134,18 @@ def register_audit_tools(mcp):
                 dashboard_datasets[db_id] = ds_ids
             except Exception:
                 dashboard_datasets[db_id] = set()
+            # Roles from list data
+            roles_data = db.get("roles", None)
+            if roles_data is not None:
+                dashboard_roles[db_id] = {r["id"] for r in roles_data}
+            else:
+                # List API didn't return roles — fetch individually
+                try:
+                    db_detail = await client.get(f"/api/v1/dashboard/{db_id}")
+                    roles_detail = db_detail.get("result", {}).get("roles", [])
+                    dashboard_roles[db_id] = {r["id"] for r in roles_detail}
+                except Exception:
+                    dashboard_roles[db_id] = set()
 
         # Role -> permissions
         role_perms_map = await _build_role_permissions_map(client)
@@ -234,22 +251,38 @@ def register_audit_tools(mcp):
                 else:
                     datasets_access[ds_name] = 0
 
-            # Dashboard access (requires datasource_access to ALL datasets)
-            dashboards_access: dict[str, int] = {}
+            # Dashboard access: visibility (roles) + data (datasource_access)
+            dashboards_access: dict[str, Any] = {}
             for db in all_dashboards:
                 db_id = db["id"]
                 db_name = dashboard_info[db_id]
+
+                # 1. Visibility: dashboard.roles empty → visible to all;
+                #    otherwise user must have one of the dashboard's roles
+                db_role_ids = dashboard_roles.get(db_id, set())
+                if db_role_ids:
+                    is_visible = bool(effective_role_ids & db_role_ids)
+                else:
+                    is_visible = True
+
+                # 2. Data access: datasource_access to ALL datasets
                 required_ds = dashboard_datasets.get(db_id, set())
                 if not required_ds:
-                    # No datasets — accessible to everyone
-                    dashboards_access[db_name] = 1
+                    has_data = True
                 else:
-                    has_all = all(
+                    has_data = all(
                         ds_access_map.get(ds_id) in user_perm_ids
                         for ds_id in required_ds
                         if ds_access_map.get(ds_id) is not None
                     )
-                    dashboards_access[db_name] = 1 if has_all else 0
+
+                # Combined result
+                if is_visible and has_data:
+                    dashboards_access[db_name] = 1
+                elif is_visible and not has_data:
+                    dashboards_access[db_name] = "visible_no_data"
+                else:
+                    dashboards_access[db_name] = 0
 
             # RLS regions
             rls_regions: list[str] = []

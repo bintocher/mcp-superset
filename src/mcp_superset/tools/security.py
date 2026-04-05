@@ -1026,3 +1026,304 @@ def register_security_tools(mcp):
 
         result = await client.delete(f"/api/v1/rowlevelsecurity/{rls_id}")
         return json.dumps(result, ensure_ascii=False)
+
+    # === Bulk operations ===
+
+    @mcp.tool
+    async def superset_bulk_user_role_add(
+        role_id: int,
+        user_ids: list[int] | None = None,
+        filter_role_id: int | None = None,
+        exclude_admin: bool = True,
+        confirm: bool = False,
+    ) -> str:
+        """Add a role to multiple users (without removing existing roles).
+
+        Select users by explicit IDs or by current role filter.
+
+        Args:
+            role_id: Role ID to add.
+            user_ids: Explicit list of user IDs. If None, uses filter_role_id.
+            filter_role_id: Add to all users who have this role. Ignored if user_ids is set.
+            exclude_admin: Skip Admin users (default True).
+            confirm: True to apply. False for dry-run.
+        """
+        # Resolve target users
+        all_users_resp = await client.get_all("/api/v1/security/users/")
+        all_users = all_users_resp.get("result", [])
+
+        targets = []
+        for u in all_users:
+            role_names = [r["name"] for r in u.get("roles", [])]
+            role_ids_set = {r["id"] for r in u.get("roles", [])}
+            if exclude_admin and "Admin" in role_names:
+                continue
+            if role_id in role_ids_set:
+                continue  # already has this role
+            if user_ids is not None:
+                if u["id"] in user_ids:
+                    targets.append(u)
+            elif filter_role_id is not None:
+                if filter_role_id in role_ids_set:
+                    targets.append(u)
+            else:
+                return json.dumps({"error": "Specify user_ids or filter_role_id"})
+
+        if not confirm:
+            # Resolve role name
+            try:
+                role_info = await client.get(f"/api/v1/security/roles/{role_id}")
+                role_name = role_info.get("result", {}).get("name", f"ID={role_id}")
+            except Exception:
+                role_name = f"ID={role_id}"
+            return json.dumps({
+                "status": "dry_run",
+                "role": role_name,
+                "users_to_update": len(targets),
+                "sample": [
+                    {"id": u["id"], "username": u.get("username", "?")}
+                    for u in targets[:10]
+                ],
+                "message": f"Will ADD role '{role_name}' to {len(targets)} users. Pass confirm=True to apply.",
+            }, ensure_ascii=False)
+
+        ok, fail = 0, 0
+        errors = []
+        for u in targets:
+            current_role_ids = [r["id"] for r in u.get("roles", [])]
+            new_roles = list(set(current_role_ids + [role_id]))
+            try:
+                await client.put(
+                    f"/api/v1/security/users/{u['id']}",
+                    json={"roles": new_roles},
+                )
+                ok += 1
+            except Exception as e:
+                fail += 1
+                errors.append({"user_id": u["id"], "error": str(e)})
+
+        return json.dumps({
+            "status": "applied",
+            "ok": ok,
+            "fail": fail,
+            "errors": errors[:10],
+        }, ensure_ascii=False)
+
+    @mcp.tool
+    async def superset_bulk_user_role_remove(
+        role_id: int,
+        user_ids: list[int] | None = None,
+        exclude_admin: bool = True,
+        confirm: bool = False,
+    ) -> str:
+        """Remove a role from multiple users.
+
+        Args:
+            role_id: Role ID to remove.
+            user_ids: Explicit list of user IDs. If None, removes from ALL users who have it.
+            exclude_admin: Skip Admin users (default True).
+            confirm: True to apply. False for dry-run.
+        """
+        all_users_resp = await client.get_all("/api/v1/security/users/")
+        all_users = all_users_resp.get("result", [])
+
+        targets = []
+        for u in all_users:
+            role_names = [r["name"] for r in u.get("roles", [])]
+            role_ids_set = {r["id"] for r in u.get("roles", [])}
+            if exclude_admin and "Admin" in role_names:
+                continue
+            if role_id not in role_ids_set:
+                continue  # doesn't have this role
+            if user_ids is not None and u["id"] not in user_ids:
+                continue
+            targets.append(u)
+
+        if not confirm:
+            try:
+                role_info = await client.get(f"/api/v1/security/roles/{role_id}")
+                role_name = role_info.get("result", {}).get("name", f"ID={role_id}")
+            except Exception:
+                role_name = f"ID={role_id}"
+            return json.dumps({
+                "status": "dry_run",
+                "role": role_name,
+                "users_to_update": len(targets),
+                "sample": [
+                    {"id": u["id"], "username": u.get("username", "?")}
+                    for u in targets[:10]
+                ],
+                "message": f"Will REMOVE role '{role_name}' from {len(targets)} users. Pass confirm=True to apply.",
+            }, ensure_ascii=False)
+
+        ok, fail = 0, 0
+        errors = []
+        for u in targets:
+            current_role_ids = [r["id"] for r in u.get("roles", [])]
+            new_roles = [r for r in current_role_ids if r != role_id]
+            if not new_roles:
+                fail += 1
+                errors.append({"user_id": u["id"], "error": "Cannot remove last role"})
+                continue
+            try:
+                await client.put(
+                    f"/api/v1/security/users/{u['id']}",
+                    json={"roles": new_roles},
+                )
+                ok += 1
+            except Exception as e:
+                fail += 1
+                errors.append({"user_id": u["id"], "error": str(e)})
+
+        return json.dumps({
+            "status": "applied",
+            "ok": ok,
+            "fail": fail,
+            "errors": errors[:10],
+        }, ensure_ascii=False)
+
+    @mcp.tool
+    async def superset_bulk_user_role_replace(
+        old_role_id: int,
+        new_role_id: int,
+        exclude_admin: bool = True,
+        confirm: bool = False,
+    ) -> str:
+        """Replace one role with another for all users who have it.
+
+        Adds new_role_id first, then removes old_role_id (safe two-step).
+
+        Args:
+            old_role_id: Role ID to replace.
+            new_role_id: Role ID to set instead.
+            exclude_admin: Skip Admin users (default True).
+            confirm: True to apply. False for dry-run.
+        """
+        all_users_resp = await client.get_all("/api/v1/security/users/")
+        all_users = all_users_resp.get("result", [])
+
+        targets = []
+        for u in all_users:
+            role_names = [r["name"] for r in u.get("roles", [])]
+            role_ids_set = {r["id"] for r in u.get("roles", [])}
+            if exclude_admin and "Admin" in role_names:
+                continue
+            if old_role_id in role_ids_set:
+                targets.append(u)
+
+        if not confirm:
+            try:
+                old_info = await client.get(f"/api/v1/security/roles/{old_role_id}")
+                old_name = old_info.get("result", {}).get("name", f"ID={old_role_id}")
+            except Exception:
+                old_name = f"ID={old_role_id}"
+            try:
+                new_info = await client.get(f"/api/v1/security/roles/{new_role_id}")
+                new_name = new_info.get("result", {}).get("name", f"ID={new_role_id}")
+            except Exception:
+                new_name = f"ID={new_role_id}"
+            return json.dumps({
+                "status": "dry_run",
+                "old_role": old_name,
+                "new_role": new_name,
+                "users_to_update": len(targets),
+                "sample": [
+                    {"id": u["id"], "username": u.get("username", "?")}
+                    for u in targets[:10]
+                ],
+                "message": (
+                    f"Will REPLACE role '{old_name}' with '{new_name}' "
+                    f"for {len(targets)} users. Pass confirm=True to apply."
+                ),
+            }, ensure_ascii=False)
+
+        ok, fail = 0, 0
+        errors = []
+        for u in targets:
+            current_role_ids = [r["id"] for r in u.get("roles", [])]
+            new_roles = list(set(
+                [r for r in current_role_ids if r != old_role_id] + [new_role_id]
+            ))
+            try:
+                await client.put(
+                    f"/api/v1/security/users/{u['id']}",
+                    json={"roles": new_roles},
+                )
+                ok += 1
+            except Exception as e:
+                fail += 1
+                errors.append({"user_id": u["id"], "error": str(e)})
+
+        return json.dumps({
+            "status": "applied",
+            "ok": ok,
+            "fail": fail,
+            "errors": errors[:10],
+        }, ensure_ascii=False)
+
+    @mcp.tool
+    async def superset_role_copy_permissions(
+        source_role_id: int,
+        target_role_id: int,
+        confirm: bool = False,
+    ) -> str:
+        """Copy all permissions from one role to another (full replacement).
+
+        Args:
+            source_role_id: Role to copy permissions FROM.
+            target_role_id: Role to copy permissions TO (existing permissions will be REPLACED).
+            confirm: True to apply. False for dry-run.
+        """
+        # Get source permissions
+        source_resp = await client.get(
+            f"/api/v1/security/roles/{source_role_id}/permissions/"
+        )
+        source_perms = source_resp.get("result", [])
+        perm_ids = []
+        for p in source_perms:
+            if isinstance(p, dict) and "id" in p:
+                perm_ids.append(p["id"])
+            elif isinstance(p, int):
+                perm_ids.append(p)
+
+        if not confirm:
+            try:
+                src_info = await client.get(f"/api/v1/security/roles/{source_role_id}")
+                src_name = src_info.get("result", {}).get("name", f"ID={source_role_id}")
+            except Exception:
+                src_name = f"ID={source_role_id}"
+            try:
+                tgt_info = await client.get(f"/api/v1/security/roles/{target_role_id}")
+                tgt_name = tgt_info.get("result", {}).get("name", f"ID={target_role_id}")
+            except Exception:
+                tgt_name = f"ID={target_role_id}"
+            # Get target current count
+            try:
+                target_resp = await client.get(
+                    f"/api/v1/security/roles/{target_role_id}/permissions/"
+                )
+                target_count = len(target_resp.get("result", []))
+            except Exception:
+                target_count = "?"
+            return json.dumps({
+                "status": "dry_run",
+                "source": src_name,
+                "target": tgt_name,
+                "permissions_to_copy": len(perm_ids),
+                "target_current_permissions": target_count,
+                "message": (
+                    f"Will REPLACE all permissions of '{tgt_name}' ({target_count} perms) "
+                    f"with permissions from '{src_name}' ({len(perm_ids)} perms). "
+                    f"Pass confirm=True to apply."
+                ),
+            }, ensure_ascii=False)
+
+        result = await client.post(
+            f"/api/v1/security/roles/{target_role_id}/permissions",
+            json={"permission_view_menu_ids": perm_ids},
+        )
+        return json.dumps({
+            "status": "applied",
+            "permissions_set": len(perm_ids),
+            "result": result,
+        }, ensure_ascii=False)

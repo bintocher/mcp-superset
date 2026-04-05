@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2026-04-05
+
+### Added
+
+- **Bulk role operations** (4 new tools):
+  - `superset_bulk_user_role_add` — add a role to multiple users (by user IDs or by current role filter)
+  - `superset_bulk_user_role_remove` — remove a role from multiple users (prevents removing last role)
+  - `superset_bulk_user_role_replace` — replace one role with another for all users who have it
+  - `superset_role_copy_permissions` — copy all permissions from one role to another
+  - All bulk operations support dry-run mode and exclude Admin users by default
+- **Improved permissions audit** (`superset_permissions_audit`):
+  - Now checks both dashboard visibility (via `dashboard.roles`) AND `datasource_access`
+  - Three access states: `1` (full access), `0` (no access), `"visible_no_data"` (can open dashboard but charts fail)
+  - Previously only checked `datasource_access`, missing role-based dashboard visibility
+
+### Changed
+
+- Total tools count: 119 (was 115)
+
 ## [0.2.4] - 2026-03-11
 
 ### Added

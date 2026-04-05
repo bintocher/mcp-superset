@@ -14,16 +14,16 @@
 [![Typed](https://img.shields.io/badge/typed-py.typed-blue.svg)](https://peps.python.org/pep-0561/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Tools: 128+](https://img.shields.io/badge/MCP_tools-128%2B-brightgreen.svg)](#available-tools-128)
+[![Tools: 137](https://img.shields.io/badge/MCP_tools-132%2B-brightgreen.svg)](#available-tools-132)
 [![GitHub stars](https://img.shields.io/github/stars/bintocher/mcp-superset.svg?style=social)](https://github.com/bintocher/mcp-superset)
 
-A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for [Apache Superset](https://superset.apache.org/). Gives AI assistants (Claude, GPT, etc.) full control over your Superset instance — dashboards, charts, datasets, SQL Lab, users, roles, RLS, and more — through 128+ tools.
+A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for [Apache Superset](https://superset.apache.org/). Gives AI assistants (Claude, GPT, etc.) full control over your Superset instance — dashboards, charts, datasets, SQL Lab, users, roles, RLS, and more — through 137 tools.
 
 ## Comparison with Other Superset MCP Servers
 
 | Feature | **mcp-superset** | [superset-mcp](https://github.com/aptro/superset-mcp) | [superset-mcp (Winding2020)](https://github.com/Winding2020/superset-mcp) | [superset-mcp-server](https://github.com/LiusCraft/superset-mcp-server) |
 |---------|:-:|:-:|:-:|:-:|
-| **Total tools** | **128+** | ~60 | ~31 | 4 |
+| **Total tools** | **137** | 60 | 31 | 4 |
 | Language | Python | Python | TypeScript | TypeScript |
 | Dashboard CRUD | 15 tools | 5 | 8 | - |
 | Dashboard native filters | **5 tools** | - | - | - |
@@ -31,7 +31,7 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 | Database tools | 18 tools | 14 | 1 | 1 |
 | Dataset tools | 11 tools | 3 | 7 | - |
 | SQL Lab | 5 tools | 7 | 1 | 1 |
-| **Security (users/roles)** | **22 tools** | 2 | - | - |
+| **Security (users/roles)** | **26 tools** | 2 | - | - |
 | **Row Level Security** | **5 tools** | - | - | - |
 | **Groups** | **9 tools** | - | - | - |
 | **Permissions audit** | **yes** | - | - | - |
@@ -62,7 +62,7 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 
 ## Features
 
-- **128+ MCP tools** covering the complete Superset REST API
+- **137 MCP tools** covering the complete Superset REST API
 - **Dashboard management** — CRUD, copy, publish/unpublish, export/import, embedded mode, native filters
 - **Chart management** — CRUD, copy, data retrieval, export/import, cache warmup
 - **Database management** — CRUD, connection testing, schema/table introspection, SQL validation
@@ -208,7 +208,7 @@ Any MCP-compatible client can connect via:
 - **SSE**: `http://<host>:<port>/sse`
 - **stdio**: pipe to `mcp-superset --transport stdio`
 
-## Available Tools (128+)
+## Available Tools (137)
 
 ### Dashboards (15 tools)
 
@@ -313,7 +313,7 @@ Any MCP-compatible client can connect via:
 | `superset_saved_query_update` | Update a saved query |
 | `superset_saved_query_delete` | Delete a saved query (requires confirmation) |
 
-### Security & Access Control (22 tools)
+### Security & Access Control (26 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -332,8 +332,12 @@ Any MCP-compatible client can connect via:
 | `superset_permission_list` | List all available permissions |
 | `superset_role_permissions_get` | Get permissions assigned to a role |
 | `superset_role_permission_add` | Set role permissions (full replacement, requires confirmation) |
+| `superset_role_copy_permissions` | Copy all permissions from one role to another |
 | `superset_dashboard_grant_role_access` | Grant a role access to dashboard and its datasets |
 | `superset_dashboard_revoke_role_access` | Revoke a role's access to dashboard datasets |
+| `superset_bulk_user_role_add` | Add a role to multiple users (by IDs or by current role) |
+| `superset_bulk_user_role_remove` | Remove a role from multiple users |
+| `superset_bulk_user_role_replace` | Replace one role with another for all matching users |
 | `superset_rls_list` | List Row Level Security rules |
 | `superset_rls_get` | Get RLS rule details |
 | `superset_rls_create` | Create an RLS rule |
@@ -422,6 +426,10 @@ Destructive operations require explicit confirmation parameters:
 | Set role permissions | `confirm_full_replace=True` | — |
 | Grant dashboard access | `confirm_grant=True` | Dry-run results |
 | Revoke dashboard access | `confirm_revoke=True` | Dry-run results |
+| Bulk add role to users | `confirm=True` | User count, sample list |
+| Bulk remove role from users | `confirm=True` | User count, prevents last role removal |
+| Bulk replace role | `confirm=True` | Old/new role names, user count |
+| Copy role permissions | `confirm=True` | Source/target permission counts |
 
 ### Automatic Protections
 
@@ -458,7 +466,7 @@ superset-mcp/
         ├── databases.py        # Database tools (18)
         ├── datasets.py         # Dataset tools (11)
         ├── queries.py          # SQL Lab + saved query tools (13)
-        ├── security.py         # User, role, permission, RLS tools (22)
+        ├── security.py         # User, role, permission, RLS, bulk operations (26)
         ├── groups.py           # Group management tools (9)
         ├── audit.py            # Permissions audit tool (1)
         ├── tags.py             # Tag tools (7)
