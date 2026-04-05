@@ -1076,16 +1076,16 @@ def register_security_tools(mcp):
                 role_name = role_info.get("result", {}).get("name", f"ID={role_id}")
             except Exception:
                 role_name = f"ID={role_id}"
-            return json.dumps({
-                "status": "dry_run",
-                "role": role_name,
-                "users_to_update": len(targets),
-                "sample": [
-                    {"id": u["id"], "username": u.get("username", "?")}
-                    for u in targets[:10]
-                ],
-                "message": f"Will ADD role '{role_name}' to {len(targets)} users. Pass confirm=True to apply.",
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "status": "dry_run",
+                    "role": role_name,
+                    "users_to_update": len(targets),
+                    "sample": [{"id": u["id"], "username": u.get("username", "?")} for u in targets[:10]],
+                    "message": f"Will ADD role '{role_name}' to {len(targets)} users. Pass confirm=True to apply.",
+                },
+                ensure_ascii=False,
+            )
 
         ok, fail = 0, 0
         errors = []
@@ -1102,12 +1102,15 @@ def register_security_tools(mcp):
                 fail += 1
                 errors.append({"user_id": u["id"], "error": str(e)})
 
-        return json.dumps({
-            "status": "applied",
-            "ok": ok,
-            "fail": fail,
-            "errors": errors[:10],
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "status": "applied",
+                "ok": ok,
+                "fail": fail,
+                "errors": errors[:10],
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_bulk_user_role_remove(
@@ -1145,16 +1148,16 @@ def register_security_tools(mcp):
                 role_name = role_info.get("result", {}).get("name", f"ID={role_id}")
             except Exception:
                 role_name = f"ID={role_id}"
-            return json.dumps({
-                "status": "dry_run",
-                "role": role_name,
-                "users_to_update": len(targets),
-                "sample": [
-                    {"id": u["id"], "username": u.get("username", "?")}
-                    for u in targets[:10]
-                ],
-                "message": f"Will REMOVE role '{role_name}' from {len(targets)} users. Pass confirm=True to apply.",
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "status": "dry_run",
+                    "role": role_name,
+                    "users_to_update": len(targets),
+                    "sample": [{"id": u["id"], "username": u.get("username", "?")} for u in targets[:10]],
+                    "message": f"Will REMOVE role '{role_name}' from {len(targets)} users. Pass confirm=True to apply.",
+                },
+                ensure_ascii=False,
+            )
 
         ok, fail = 0, 0
         errors = []
@@ -1175,12 +1178,15 @@ def register_security_tools(mcp):
                 fail += 1
                 errors.append({"user_id": u["id"], "error": str(e)})
 
-        return json.dumps({
-            "status": "applied",
-            "ok": ok,
-            "fail": fail,
-            "errors": errors[:10],
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "status": "applied",
+                "ok": ok,
+                "fail": fail,
+                "errors": errors[:10],
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_bulk_user_role_replace(
@@ -1222,28 +1228,26 @@ def register_security_tools(mcp):
                 new_name = new_info.get("result", {}).get("name", f"ID={new_role_id}")
             except Exception:
                 new_name = f"ID={new_role_id}"
-            return json.dumps({
-                "status": "dry_run",
-                "old_role": old_name,
-                "new_role": new_name,
-                "users_to_update": len(targets),
-                "sample": [
-                    {"id": u["id"], "username": u.get("username", "?")}
-                    for u in targets[:10]
-                ],
-                "message": (
-                    f"Will REPLACE role '{old_name}' with '{new_name}' "
-                    f"for {len(targets)} users. Pass confirm=True to apply."
-                ),
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "status": "dry_run",
+                    "old_role": old_name,
+                    "new_role": new_name,
+                    "users_to_update": len(targets),
+                    "sample": [{"id": u["id"], "username": u.get("username", "?")} for u in targets[:10]],
+                    "message": (
+                        f"Will REPLACE role '{old_name}' with '{new_name}' "
+                        f"for {len(targets)} users. Pass confirm=True to apply."
+                    ),
+                },
+                ensure_ascii=False,
+            )
 
         ok, fail = 0, 0
         errors = []
         for u in targets:
             current_role_ids = [r["id"] for r in u.get("roles", [])]
-            new_roles = list(set(
-                [r for r in current_role_ids if r != old_role_id] + [new_role_id]
-            ))
+            new_roles = list(set([r for r in current_role_ids if r != old_role_id] + [new_role_id]))
             try:
                 await client.put(
                     f"/api/v1/security/users/{u['id']}",
@@ -1254,12 +1258,15 @@ def register_security_tools(mcp):
                 fail += 1
                 errors.append({"user_id": u["id"], "error": str(e)})
 
-        return json.dumps({
-            "status": "applied",
-            "ok": ok,
-            "fail": fail,
-            "errors": errors[:10],
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "status": "applied",
+                "ok": ok,
+                "fail": fail,
+                "errors": errors[:10],
+            },
+            ensure_ascii=False,
+        )
 
     @mcp.tool
     async def superset_role_copy_permissions(
@@ -1275,9 +1282,7 @@ def register_security_tools(mcp):
             confirm: True to apply. False for dry-run.
         """
         # Get source permissions
-        source_resp = await client.get(
-            f"/api/v1/security/roles/{source_role_id}/permissions/"
-        )
+        source_resp = await client.get(f"/api/v1/security/roles/{source_role_id}/permissions/")
         source_perms = source_resp.get("result", [])
         perm_ids = []
         for p in source_perms:
@@ -1299,31 +1304,35 @@ def register_security_tools(mcp):
                 tgt_name = f"ID={target_role_id}"
             # Get target current count
             try:
-                target_resp = await client.get(
-                    f"/api/v1/security/roles/{target_role_id}/permissions/"
-                )
+                target_resp = await client.get(f"/api/v1/security/roles/{target_role_id}/permissions/")
                 target_count = len(target_resp.get("result", []))
             except Exception:
                 target_count = "?"
-            return json.dumps({
-                "status": "dry_run",
-                "source": src_name,
-                "target": tgt_name,
-                "permissions_to_copy": len(perm_ids),
-                "target_current_permissions": target_count,
-                "message": (
-                    f"Will REPLACE all permissions of '{tgt_name}' ({target_count} perms) "
-                    f"with permissions from '{src_name}' ({len(perm_ids)} perms). "
-                    f"Pass confirm=True to apply."
-                ),
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "status": "dry_run",
+                    "source": src_name,
+                    "target": tgt_name,
+                    "permissions_to_copy": len(perm_ids),
+                    "target_current_permissions": target_count,
+                    "message": (
+                        f"Will REPLACE all permissions of '{tgt_name}' ({target_count} perms) "
+                        f"with permissions from '{src_name}' ({len(perm_ids)} perms). "
+                        f"Pass confirm=True to apply."
+                    ),
+                },
+                ensure_ascii=False,
+            )
 
         result = await client.post(
             f"/api/v1/security/roles/{target_role_id}/permissions",
             json={"permission_view_menu_ids": perm_ids},
         )
-        return json.dumps({
-            "status": "applied",
-            "permissions_set": len(perm_ids),
-            "result": result,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "status": "applied",
+                "permissions_set": len(perm_ids),
+                "result": result,
+            },
+            ensure_ascii=False,
+        )
