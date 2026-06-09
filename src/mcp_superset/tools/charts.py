@@ -4,7 +4,7 @@ import base64
 import json
 import re
 
-from mcp_superset.tools.helpers import auto_sync_chart_dashboards
+from mcp_superset.tools.helpers import auto_sync_chart_dashboards, parse_json_arg
 
 # Moment.js date format patterns that do NOT work in Superset 6.x.
 # Superset uses D3 strftime (%Y-%m-%d); moment.js (YYYY-MM-DD) renders as literal text.
@@ -126,6 +126,47 @@ _VALID_VIZ_TYPES = {
 }
 
 
+# viz_types that have NO temporal axis — dashboard time filters cannot apply
+# to them via granularity_sqla, so requiring it would block legitimate charts.
+# Everything else (timeseries, tables, big_number/KPI) still requires it so
+# dashboard time/native filters keep working.
+_NON_TEMPORAL_VIZ_TYPES = {
+    # Maps
+    "country_map",
+    "world_map",
+    "mapbox",
+    "deck_arc",
+    "deck_contour",
+    "deck_geojson",
+    "deck_grid",
+    "deck_heatmap",
+    "deck_hex",
+    "deck_multi",
+    "deck_path",
+    "deck_polygon",
+    "deck_scatter",
+    "deck_screengrid",
+    # Text / templates
+    "word_cloud",
+    "handlebars",
+    # Categorical / hierarchical (no inherent time axis)
+    "pie",
+    "funnel",
+    "radar",
+    "gauge_chart",
+    "treemap_v2",
+    "sunburst_v2",
+    "sankey_v2",
+    "chord",
+    "partition",
+    "graph_chart",
+    "tree_chart",
+    "rose",
+    "paired_ttest",
+    "para",
+}
+
+
 def _validate_chart_params(params_str: str | None, viz_type: str | None = None) -> str | None:
     """Validate params and viz_type for common errors.
 
@@ -166,8 +207,12 @@ def _validate_chart_params(params_str: str | None, viz_type: str | None = None) 
     else:
         params_dict = {}
 
-    # Check granularity_sqla — REQUIRED for dashboard filters to work
-    if params_str and not params_dict.get("granularity_sqla"):
+    # Check granularity_sqla — REQUIRED for dashboard time filters to work,
+    # but ONLY for viz types that actually have a temporal axis. Non-temporal
+    # viz (maps, pie, word_cloud, hierarchical) cannot use it and must not be
+    # blocked. When viz_type is unknown, default to requiring it (conservative).
+    needs_granularity = not (vt and vt in _NON_TEMPORAL_VIZ_TYPES)
+    if params_str and needs_granularity and not params_dict.get("granularity_sqla"):
         errors.append(
             "params does not contain 'granularity_sqla' — WITHOUT this parameter "
             "dashboard filters (time range, native filters) will NOT work "
@@ -284,10 +329,7 @@ def register_chart_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/chart/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/chart/", params=params)
+            result = await client.get_page("/api/v1/chart/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -586,7 +628,9 @@ def register_chart_tools(mcp):
                 Allowed time_range values: "Last day", "Last week", "Last month",
                 "Last year", "No filter", or "2024-01-01 : 2024-12-31".
         """
-        payload = json.loads(query_context)
+        payload, err = parse_json_arg(query_context, "query_context")
+        if err:
+            return json.dumps({"error": err}, ensure_ascii=False)
         result = await client.post("/api/v1/chart/data", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 

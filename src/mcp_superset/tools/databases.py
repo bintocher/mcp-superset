@@ -32,10 +32,7 @@ def register_database_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/database/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/database/", params=params)
+            result = await client.get_page("/api/v1/database/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool

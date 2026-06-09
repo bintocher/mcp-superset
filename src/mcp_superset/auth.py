@@ -137,3 +137,13 @@ class AuthManager:
         self._refresh_token = None
         self._csrf_token = None
         self._token_expires_at = 0
+
+    def invalidate_csrf(self) -> None:
+        """Reset only the cached CSRF token.
+
+        The JWT may still be valid while the CSRF token has expired
+        (FAB CSRF tokens have their own, shorter lifetime). This forces
+        a fresh CSRF fetch on the next mutating request without a full
+        re-login.
+        """
+        self._csrf_token = None

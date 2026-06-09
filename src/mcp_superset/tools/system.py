@@ -3,6 +3,8 @@
 import base64
 import json
 
+from mcp_superset.tools.helpers import parse_json_arg
+
 
 def register_system_tools(mcp):
     from mcp_superset.server import superset_client as client
@@ -36,10 +38,7 @@ def register_system_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/report/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/report/", params=params)
+            result = await client.get_page("/api/v1/report/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -102,7 +101,10 @@ def register_system_tools(mcp):
         if sql is not None:
             payload["sql"] = sql
         if recipients is not None:
-            payload["recipients"] = json.loads(recipients)
+            parsed, err = parse_json_arg(recipients, "recipients")
+            if err:
+                return json.dumps({"error": err}, ensure_ascii=False)
+            payload["recipients"] = parsed
         result = await client.post("/api/v1/report/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
@@ -131,7 +133,10 @@ def register_system_tools(mcp):
         if active is not None:
             payload["active"] = active
         if recipients is not None:
-            payload["recipients"] = json.loads(recipients)
+            parsed, err = parse_json_arg(recipients, "recipients")
+            if err:
+                return json.dumps({"error": err}, ensure_ascii=False)
+            payload["recipients"] = parsed
         result = await client.put(f"/api/v1/report/{report_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
@@ -191,8 +196,7 @@ def register_system_tools(mcp):
         if get_all:
             result = await client.get_all("/api/v1/annotation_layer/")
         else:
-            params = {"page": page, "page_size": page_size}
-            result = await client.get("/api/v1/annotation_layer/", params=params)
+            result = await client.get_page("/api/v1/annotation_layer/", page, page_size)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -215,10 +219,10 @@ def register_system_tools(mcp):
                 f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/",
             )
         else:
-            params = {"page": page, "page_size": page_size}
-            result = await client.get(
+            result = await client.get_page(
                 f"/api/v1/annotation_layer/{annotation_layer_id}/annotation/",
-                params=params,
+                page,
+                page_size,
             )
         return json.dumps(result, ensure_ascii=False)
 
@@ -240,6 +244,8 @@ def register_system_tools(mcp):
         if get_all:
             result = await client.get_all("/api/v1/log/recent_activity/")
         else:
+            # recent_activity is a CUSTOM endpoint (not a standard FAB list) — it
+            # reads page/page_size from plain query args, NOT from RISON q.
             params = {"page": page, "page_size": page_size}
             result = await client.get("/api/v1/log/recent_activity/", params=params)
         return json.dumps(result, ensure_ascii=False)
@@ -267,10 +273,7 @@ def register_system_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/log/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/log/", params=params)
+            result = await client.get_page("/api/v1/log/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     # === Menu & System ===

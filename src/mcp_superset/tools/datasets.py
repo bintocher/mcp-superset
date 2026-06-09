@@ -3,6 +3,8 @@
 import base64
 import json
 
+from mcp_superset.tools.helpers import parse_json_arg
+
 
 def register_dataset_tools(mcp):
     from mcp_superset.server import superset_client as client
@@ -37,10 +39,7 @@ def register_dataset_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/dataset/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/dataset/", params=params)
+            result = await client.get_page("/api/v1/dataset/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -141,9 +140,15 @@ def register_dataset_tools(mcp):
         if description is not None:
             payload["description"] = description
         if columns is not None:
-            payload["columns"] = json.loads(columns)
+            parsed, err = parse_json_arg(columns, "columns")
+            if err:
+                return json.dumps({"error": err}, ensure_ascii=False)
+            payload["columns"] = parsed
         if metrics is not None:
-            payload["metrics"] = json.loads(metrics)
+            parsed, err = parse_json_arg(metrics, "metrics")
+            if err:
+                return json.dumps({"error": err}, ensure_ascii=False)
+            payload["metrics"] = parsed
         result = await client.put(f"/api/v1/dataset/{dataset_id}", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
@@ -182,7 +187,7 @@ def register_dataset_tools(mcp):
             try:
                 ds_info = await client.get(f"/api/v1/dataset/{dataset_id}")
                 ds_name = ds_info.get("result", {}).get("table_name", "?")
-                related = await client.get(f"/api/v1/dataset/{dataset_id}/related_objects")
+                related = await client.get(f"/api/v1/dataset/{dataset_id}/related_objects/")
                 charts_count = related.get("charts", {}).get("count", 0)
                 dashboards_count = related.get("dashboards", {}).get("count", 0)
             except Exception:
@@ -235,7 +240,7 @@ def register_dataset_tools(mcp):
         Returns:
             JSON string with related charts and dashboards.
         """
-        result = await client.get(f"/api/v1/dataset/{dataset_id}/related_objects")
+        result = await client.get(f"/api/v1/dataset/{dataset_id}/related_objects/")
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool

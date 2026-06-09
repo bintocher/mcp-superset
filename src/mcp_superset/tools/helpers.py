@@ -5,25 +5,60 @@ automatically receives datasource_access to ALL datasets of that dashboard.
 This guarantees: add a user to a group -> they can see the dashboard and its data.
 """
 
+import json
+import re
 from typing import Any
+
+
+def parse_json_arg(value: str | None, field: str) -> tuple[Any, str | None]:
+    """Parse a JSON string argument, returning a clean error instead of crashing.
+
+    Tool arguments that expect JSON (e.g. columns, recipients, query_context)
+    must not raise an unhandled JSONDecodeError on malformed input — the tool
+    should return a structured {"error": ...} instead.
+
+    Args:
+        value: The raw JSON string from the caller (or None).
+        field: Argument name, used in the error message.
+
+    Returns:
+        (parsed_value, None) on success, or (None, error_message) on failure.
+        If value is None, returns (None, None) — the caller decides if it is required.
+    """
+    if value is None:
+        return None, None
+    try:
+        return json.loads(value), None
+    except (json.JSONDecodeError, TypeError) as e:
+        return None, f"Invalid JSON in argument '{field}': {e}"
+
+
+# Extracts the dataset id from a datasource_access view_menu name like
+# "[Database].[table_name](id:42)".
+_DATASOURCE_ID_RE = re.compile(r"\(id:(\d+)\)")
 
 
 async def find_datasource_permissions(
     client: Any,
-    dataset_ids: set[int],
+    dataset_ids: set[int] | None = None,
 ) -> dict[int, int]:
-    """Find permission_view_menu_id for datasource_access on the specified datasets.
+    """Build {dataset_id: permission_view_menu_id} for datasource_access permissions.
+
+    Paginates /api/v1/security/permissions-resources/ and extracts the dataset id
+    from each datasource_access view_menu name (format "[DB].[table](id:N)").
 
     Args:
         client: SupersetClient instance.
-        dataset_ids: Set of dataset IDs to look up.
+        dataset_ids: If given, only these datasets are of interest and the scan
+            stops early once all of them are found. If None, the full map for
+            ALL datasets is returned (audit use case).
 
     Returns:
         Mapping of {dataset_id: permission_view_menu_id}.
     """
     found: dict[int, int] = {}
     page = 0
-    while page < 50:
+    while page < 50:  # guard against infinite loop
         try:
             resp = await client.get(
                 "/api/v1/security/permissions-resources/",
@@ -35,13 +70,17 @@ async def find_datasource_permissions(
         if not items:
             break
         for item in items:
-            perm_name = item.get("permission", {}).get("name", "")
+            if item.get("permission", {}).get("name", "") != "datasource_access":
+                continue
             view_name = item.get("view_menu", {}).get("name", "")
-            if perm_name == "datasource_access":
-                for ds_id in dataset_ids:
-                    if f"(id:{ds_id})" in view_name:
-                        found[ds_id] = item["id"]
-        if found.keys() >= dataset_ids:
+            match = _DATASOURCE_ID_RE.search(view_name)
+            if not match:
+                continue
+            ds_id = int(match.group(1))
+            if dataset_ids is None or ds_id in dataset_ids:
+                found[ds_id] = item["id"]
+        # Early exit once every requested dataset is found
+        if dataset_ids is not None and found.keys() >= dataset_ids:
             break
         if len(items) < 100:
             break
@@ -137,10 +176,12 @@ async def auto_sync_dashboard_access(
                 result["already_ok"].append(f"Role {role_id}: all datasource_access already present")
                 continue
 
-            # Add missing permissions
+            # Add missing permissions.
+            # POST /api/v1/security/roles/{id}/permissions (no trailing slash)
+            # REPLACES all role permissions, so send the full merged list.
             new_perm_ids = sorted(current_perm_ids | set(missing.values()))
-            await client.put(
-                f"/api/v1/security/roles/{role_id}/permissions/",
+            await client.post(
+                f"/api/v1/security/roles/{role_id}/permissions",
                 json_data={"permission_view_menu_ids": new_perm_ids},
             )
 

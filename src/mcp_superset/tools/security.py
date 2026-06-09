@@ -1,52 +1,8 @@
 """Security management tools: users, roles, permissions, RLS."""
 
 import json
-from typing import Any
 
-
-async def _find_datasource_permissions(
-    client: Any,
-    dataset_ids: set[int],
-) -> dict[int, int]:
-    """Find permission_view_menu_id for datasource_access on the specified datasets.
-
-    Paginates through /api/v1/security/permissions-resources/ looking for entries
-    matching datasource_access + [Database].[table](id:N).
-
-    Args:
-        client: SupersetClient instance.
-        dataset_ids: Set of dataset IDs to look up.
-
-    Returns:
-        Mapping of {dataset_id: permission_view_menu_id}.
-    """
-    found: dict[int, int] = {}
-    page = 0
-    while page < 50:  # guard against infinite loop
-        try:
-            resp = await client.get(
-                "/api/v1/security/permissions-resources/",
-                params={"q": f"(page:{page},page_size:100)"},
-            )
-        except Exception:
-            break
-        items = resp.get("result", [])
-        if not items:
-            break
-        for item in items:
-            perm_name = item.get("permission", {}).get("name", "")
-            view_name = item.get("view_menu", {}).get("name", "")
-            if perm_name == "datasource_access":
-                for ds_id in dataset_ids:
-                    if f"(id:{ds_id})" in view_name:
-                        found[ds_id] = item["id"]
-        # All found — exit early
-        if found.keys() >= dataset_ids:
-            break
-        if len(items) < 100:
-            break
-        page += 1
-    return found
+from mcp_superset.tools.helpers import find_datasource_permissions
 
 
 def register_security_tools(mcp):
@@ -101,10 +57,7 @@ def register_security_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/security/users/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/security/users/", params=params)
+            result = await client.get_page("/api/v1/security/users/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -297,10 +250,7 @@ def register_security_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/security/roles/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/security/roles/", params=params)
+            result = await client.get_page("/api/v1/security/roles/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -426,10 +376,7 @@ def register_security_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/security/permissions/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/security/permissions/", params=params)
+            result = await client.get_page("/api/v1/security/permissions/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -551,7 +498,7 @@ def register_security_tools(mcp):
         dataset_names = {ds["id"]: f"{ds.get('schema', '?')}.{ds.get('table_name', '?')}" for ds in datasets}
 
         # 4. Find datasource_access for each dataset
-        ds_perms = await _find_datasource_permissions(client, dataset_ids)
+        ds_perms = await find_datasource_permissions(client, dataset_ids)
 
         missing_ds = dataset_ids - ds_perms.keys()
         if missing_ds:
@@ -743,7 +690,7 @@ def register_security_tools(mcp):
         dataset_names = {ds["id"]: f"{ds.get('schema', '?')}.{ds.get('table_name', '?')}" for ds in datasets}
 
         # 4. Find datasource_access permission_view_menu_id
-        ds_perms = await _find_datasource_permissions(client, dataset_ids)
+        ds_perms = await find_datasource_permissions(client, dataset_ids)
         perm_ids_to_remove = set(ds_perms.values())
 
         if not perm_ids_to_remove:
@@ -847,10 +794,7 @@ def register_security_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/rowlevelsecurity/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/rowlevelsecurity/", params=params)
+            result = await client.get_page("/api/v1/rowlevelsecurity/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -900,8 +844,8 @@ def register_security_tools(mcp):
                         "REJECTED: filter_type='Base' applies to ALL users "
                         "and may override existing Regular rules (deny-by-default). "
                         "This project's architecture uses only 'Regular'. "
-                        "If you are sure, use superset_rls_create_unsafe "
-                        "or change filter_type to 'Regular'."
+                        "Change filter_type to 'Regular', or — if a Base rule is "
+                        "truly required — create it directly via the Superset UI."
                     )
                 },
                 ensure_ascii=False,
@@ -1095,7 +1039,7 @@ def register_security_tools(mcp):
             try:
                 await client.put(
                     f"/api/v1/security/users/{u['id']}",
-                    json={"roles": new_roles},
+                    json_data={"roles": new_roles},
                 )
                 ok += 1
             except Exception as e:
@@ -1171,7 +1115,7 @@ def register_security_tools(mcp):
             try:
                 await client.put(
                     f"/api/v1/security/users/{u['id']}",
-                    json={"roles": new_roles},
+                    json_data={"roles": new_roles},
                 )
                 ok += 1
             except Exception as e:
@@ -1251,7 +1195,7 @@ def register_security_tools(mcp):
             try:
                 await client.put(
                     f"/api/v1/security/users/{u['id']}",
-                    json={"roles": new_roles},
+                    json_data={"roles": new_roles},
                 )
                 ok += 1
             except Exception as e:
@@ -1326,7 +1270,7 @@ def register_security_tools(mcp):
 
         result = await client.post(
             f"/api/v1/security/roles/{target_role_id}/permissions",
-            json={"permission_view_menu_ids": perm_ids},
+            json_data={"permission_view_menu_ids": perm_ids},
         )
         return json.dumps(
             {

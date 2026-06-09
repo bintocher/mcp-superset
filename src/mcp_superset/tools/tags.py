@@ -2,6 +2,8 @@
 
 import json
 
+from mcp_superset.tools.helpers import parse_json_arg
+
 
 def register_tag_tools(mcp):
     from mcp_superset.server import superset_client as client
@@ -32,10 +34,7 @@ def register_tag_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/tag/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/tag/", params=params)
+            result = await client.get_page("/api/v1/tag/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -76,7 +75,10 @@ def register_tag_tools(mcp):
         if description is not None:
             payload["description"] = description
         if objects_to_tag is not None:
-            payload["objects_to_tag"] = json.loads(objects_to_tag)
+            parsed, err = parse_json_arg(objects_to_tag, "objects_to_tag")
+            if err:
+                return json.dumps({"error": err}, ensure_ascii=False)
+            payload["objects_to_tag"] = parsed
         result = await client.post("/api/v1/tag/", json_data=payload)
         return json.dumps(result, ensure_ascii=False)
 
@@ -180,6 +182,9 @@ def register_tag_tools(mcp):
                 objects_to_tag: pairs of [object_type, object_id].
                 Allowed types: "dashboard", "chart", "dataset", "saved_query".
         """
-        payload = {"tags": json.loads(tags)}
+        parsed, err = parse_json_arg(tags, "tags")
+        if err:
+            return json.dumps({"error": err}, ensure_ascii=False)
+        payload = {"tags": parsed}
         result = await client.post("/api/v1/tag/bulk_create", json_data=payload)
         return json.dumps(result, ensure_ascii=False)

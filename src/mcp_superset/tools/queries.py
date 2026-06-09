@@ -23,6 +23,60 @@ def _strip_sql_comments(sql: str) -> str:
     return sql.strip()
 
 
+# DDL/DML keywords that must never be executed via MCP. Detected as
+# WHOLE WORDS ANYWHERE in the query (not just at the start) to prevent
+# bypasses via CTE (WITH ... DELETE), statement chaining (SELECT 1; DROP ...),
+# parentheses ((DELETE FROM t)), or a leading EXPLAIN/ANALYZE.
+_DANGEROUS_KEYWORDS = (
+    "DROP",
+    "DELETE",
+    "UPDATE",
+    "INSERT",
+    "TRUNCATE",
+    "ALTER",
+    "CREATE",
+    "GRANT",
+    "REVOKE",
+    "COPY",
+    "MERGE",
+)
+
+
+def _strip_sql_strings(sql: str) -> str:
+    """Remove single-quoted string literals so keywords inside them don't
+    trigger false positives (and so they can't hide a chained statement).
+
+    Handles SQL-standard escaped quotes ('' inside a literal).
+
+    Args:
+        sql: SQL string (ideally with comments already stripped).
+
+    Returns:
+        SQL with single-quoted literals replaced by a space.
+    """
+    return re.sub(r"'(?:''|[^'])*'", " ", sql)
+
+
+def _detect_dangerous_sql(sql: str) -> str | None:
+    """Return the first DDL/DML keyword found in the query, or None if safe.
+
+    Strips comments and string literals first, then matches each dangerous
+    keyword as a whole word anywhere in the statement. Word boundaries keep
+    legitimate identifiers safe (e.g. update_date, deleted_at, call_datetime).
+
+    Args:
+        sql: Raw SQL query.
+
+    Returns:
+        The matched dangerous keyword (uppercase), or None.
+    """
+    cleaned = _strip_sql_strings(_strip_sql_comments(sql)).upper()
+    for keyword in _DANGEROUS_KEYWORDS:
+        if re.search(rf"\b{keyword}\b", cleaned):
+            return keyword
+    return None
+
+
 def register_query_tools(mcp):
     from mcp_superset.server import superset_client as client
 
@@ -54,34 +108,25 @@ def register_query_tools(mcp):
             template_params: JSON string with Jinja template parameters (optional).
                 Example: '{"start_date": "2024-01-01"}'
         """
-        # Guard against accidental DDL/DML
-        # Strip comments to prevent bypass via /* */ DROP ...
-        _dangerous_prefixes = (
-            "DROP",
-            "DELETE",
-            "UPDATE",
-            "INSERT",
-            "TRUNCATE",
-            "ALTER",
-            "CREATE",
-            "GRANT",
-            "REVOKE",
-        )
-        sql_clean = _strip_sql_comments(sql).upper()
-        for prefix in _dangerous_prefixes:
-            if sql_clean.startswith(prefix):
-                return json.dumps(
-                    {
-                        "error": (
-                            f"REJECTED: SQL query starts with '{prefix}' — "
-                            f"this is a modifying operation (DDL/DML). "
-                            f"Executing such queries via MCP is prohibited. "
-                            f"If the operation is truly needed — execute it "
-                            f"directly via SQL Lab in the Superset UI."
-                        )
-                    },
-                    ensure_ascii=False,
-                )
+        # Guard against DDL/DML. Detects dangerous keywords as whole words
+        # ANYWHERE in the query (after stripping comments and string literals),
+        # so CTE/chained/parenthesised/EXPLAIN-prefixed bypasses are caught.
+        # NOTE: this is a best-effort safety net, not a full SQL parser — the
+        # authoritative protection is allow_dml=false on the DB connection.
+        dangerous = _detect_dangerous_sql(sql)
+        if dangerous:
+            return json.dumps(
+                {
+                    "error": (
+                        f"REJECTED: SQL query contains '{dangerous}' — "
+                        f"this is a modifying operation (DDL/DML). "
+                        f"Executing such queries via MCP is prohibited. "
+                        f"If the operation is truly needed — execute it "
+                        f"directly via SQL Lab in the Superset UI."
+                    )
+                },
+                ensure_ascii=False,
+            )
 
         payload = {
             "database_id": database_id,
@@ -182,10 +227,7 @@ def register_query_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/query/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/query/", params=params)
+            result = await client.get_page("/api/v1/query/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -231,10 +273,7 @@ def register_query_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/saved_query/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/saved_query/", params=params)
+            result = await client.get_page("/api/v1/saved_query/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool

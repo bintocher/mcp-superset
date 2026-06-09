@@ -4,6 +4,8 @@ import json
 import re
 from typing import Any
 
+from mcp_superset.tools.helpers import find_datasource_permissions
+
 
 async def _build_role_permissions_map(client: Any) -> dict[int, set[int]]:
     """Build a mapping of role_id to set(permission_view_menu_id).
@@ -27,36 +29,6 @@ async def _build_role_permissions_map(client: Any) -> dict[int, set[int]]:
         except Exception:
             role_perms[role_id] = set()
     return role_perms
-
-
-async def _build_datasource_access_map(client: Any) -> dict[int, int]:
-    """Build a mapping of dataset_id to permission_view_menu_id for datasource_access."""
-    ds_perm: dict[int, int] = {}
-    page = 0
-    while page < 50:
-        try:
-            resp = await client.get(
-                "/api/v1/security/permissions-resources/",
-                params={"q": f"(page:{page},page_size:100)"},
-            )
-        except Exception:
-            break
-        items = resp.get("result", [])
-        if not items:
-            break
-        for item in items:
-            perm_name = item.get("permission", {}).get("name", "")
-            view_name = item.get("view_menu", {}).get("name", "")
-            if perm_name == "datasource_access":
-                # Extract dataset_id from view_name like "[DB].[table](id:N)"
-                match = re.search(r"\(id:(\d+)\)", view_name)
-                if match:
-                    ds_id = int(match.group(1))
-                    ds_perm[ds_id] = item["id"]
-        if len(items) < 100:
-            break
-        page += 1
-    return ds_perm
 
 
 def register_audit_tools(mcp):
@@ -150,8 +122,8 @@ def register_audit_tools(mcp):
         # Role -> permissions
         role_perms_map = await _build_role_permissions_map(client)
 
-        # Dataset -> datasource_access permission_view_menu_id
-        ds_access_map = await _build_datasource_access_map(client)
+        # Dataset -> datasource_access permission_view_menu_id (full map)
+        ds_access_map = await find_datasource_permissions(client)
 
         # RLS rules
         rls_resp = await client.get_all("/api/v1/rowlevelsecurity/")

@@ -4,6 +4,8 @@ import base64
 import json
 import uuid
 
+from mcp_superset.tools.helpers import parse_json_arg
+
 KPI_VIZ_TYPES = {"big_number_total", "big_number"}
 MIN_KPI_HEIGHT = 16  # 2 grid cells (1 cell = 8 units)
 
@@ -265,10 +267,7 @@ def register_dashboard_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/dashboard/", params=params)
         else:
-            params = {"page": page, "page_size": page_size}
-            if q:
-                params["q"] = q
-            result = await client.get("/api/v1/dashboard/", params=params)
+            result = await client.get_page("/api/v1/dashboard/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
@@ -313,7 +312,12 @@ def register_dashboard_tools(mcp):
         """
         # Validate KPI chart height in position_json
         if position_json is not None:
-            pos = json.loads(position_json) if isinstance(position_json, str) else position_json
+            if isinstance(position_json, str):
+                pos, err = parse_json_arg(position_json, "position_json")
+                if err:
+                    return json.dumps({"error": err}, ensure_ascii=False)
+            else:
+                pos = position_json
             kpi_error = await _validate_kpi_height(pos)
             if kpi_error:
                 return json.dumps({"error": kpi_error}, ensure_ascii=False)
@@ -421,7 +425,12 @@ def register_dashboard_tools(mcp):
         """
         # Validate KPI chart height in position_json
         if position_json is not None:
-            pos = json.loads(position_json) if isinstance(position_json, str) else position_json
+            if isinstance(position_json, str):
+                pos, err = parse_json_arg(position_json, "position_json")
+                if err:
+                    return json.dumps({"error": err}, ensure_ascii=False)
+            else:
+                pos = position_json
             kpi_error = await _validate_kpi_height(pos)
             if kpi_error:
                 return json.dumps({"error": kpi_error}, ensure_ascii=False)
@@ -993,7 +1002,9 @@ def register_dashboard_tools(mcp):
         position = json.loads(result.get("position_json", "{}"))
 
         chart_ids = _extract_chart_ids(position)
-        filter_defs = json.loads(filters_json)
+        filter_defs, err = parse_json_arg(filters_json, "filters_json")
+        if err:
+            return json.dumps({"error": err}, ensure_ascii=False)
 
         new_filters = []
         for fd in filter_defs:

@@ -91,6 +91,20 @@ class SupersetClient:
                 json=json_data,
             )
 
+        # CSRF token may expire independently of the JWT (FAB CSRF has its own,
+        # shorter lifetime). Retry ONCE on a 400 that is clearly a CSRF failure —
+        # narrowly, so genuine validation errors (other 400s) are NOT masked.
+        if resp.status_code == 400 and need_csrf and self._is_csrf_error(resp):
+            self.auth.invalidate_csrf()
+            headers = await self._get_headers(need_csrf=need_csrf)
+            resp = await self._client.request(
+                method=method,
+                url=url,
+                headers=headers,
+                params=params,
+                json=json_data,
+            )
+
         if resp.status_code >= 400:
             error_detail = ""
             try:
@@ -258,6 +272,23 @@ class SupersetClient:
         return resp.json()
 
     @staticmethod
+    def _is_csrf_error(resp: httpx.Response) -> bool:
+        """Detect whether a 400 response was caused by an expired/missing CSRF token.
+
+        Args:
+            resp: The httpx response with status 400.
+
+        Returns:
+            True if the response body mentions a CSRF problem.
+        """
+        try:
+            body = resp.json()
+            message = str(body.get("message", "") or body.get("msg", "") or body)
+        except Exception:
+            message = resp.text[:500]
+        return "csrf" in message.lower()
+
+    @staticmethod
     def _build_rison_q(page: int, page_size: int, existing_q: str | None = None) -> str:
         """Build a RISON query string with pagination, merging with an existing q filter.
 
@@ -284,6 +315,34 @@ class SupersetClient:
             return f"({pagination})"
         # Non-standard format — wrap everything
         return f"({pagination},{q})"
+
+    async def get_page(
+        self,
+        endpoint: str,
+        page: int = 0,
+        page_size: int = 100,
+        q: str | None = None,
+        extra_params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Fetch a single page using RISON pagination.
+
+        Superset ignores page/page_size as plain query parameters — they MUST
+        be passed inside the RISON q parameter. This builds the correct q
+        (merging any existing RISON filter) and issues the GET.
+
+        Args:
+            endpoint: API endpoint path.
+            page: Page number (0-based).
+            page_size: Number of results per page.
+            q: Existing RISON filter to merge with pagination (optional).
+            extra_params: Additional non-RISON query parameters (e.g. tags).
+
+        Returns:
+            Parsed JSON response for the requested page.
+        """
+        params: dict[str, Any] = dict(extra_params or {})
+        params["q"] = self._build_rison_q(page, page_size, q)
+        return await self.get(endpoint, params=params)
 
     async def get_all(
         self,
