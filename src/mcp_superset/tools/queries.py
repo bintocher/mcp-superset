@@ -26,19 +26,24 @@ def _strip_sql_comments(sql: str) -> str:
 # DDL/DML keywords that must never be executed via MCP. Detected as
 # WHOLE WORDS ANYWHERE in the query (not just at the start) to prevent
 # bypasses via CTE (WITH ... DELETE), statement chaining (SELECT 1; DROP ...),
-# parentheses ((DELETE FROM t)), or a leading EXPLAIN/ANALYZE.
+# parentheses ((DELETE FROM t)), a leading EXPLAIN/ANALYZE, or a PL/pgSQL
+# anonymous block (DO $$ BEGIN EXECUTE '...' END $$) that hides the DDL in a
+# string literal. Order matters: keywords that subsume others (TRUNCATE, MERGE)
+# come first so the rejection message names the most specific operation.
 _DANGEROUS_KEYWORDS = (
     "DROP",
+    "TRUNCATE",
+    "MERGE",
     "DELETE",
     "UPDATE",
     "INSERT",
-    "TRUNCATE",
     "ALTER",
     "CREATE",
     "GRANT",
     "REVOKE",
     "COPY",
-    "MERGE",
+    "DO",  # PL/pgSQL anonymous block
+    "EXECUTE",  # dynamic SQL inside a DO block
 )
 
 

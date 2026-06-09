@@ -34,12 +34,7 @@ def register_group_tools(mcp):
                 params["q"] = q
             result = await client.get_all("/api/v1/security/groups/", params=params)
         else:
-            params = {}
-            if q:
-                params["q"] = q
-            else:
-                params["q"] = f"(page:{page},page_size:{page_size})"
-            result = await client.get("/api/v1/security/groups/", params=params)
+            result = await client.get_page("/api/v1/security/groups/", page, page_size, q)
         return json.dumps(result, ensure_ascii=False)
 
     @mcp.tool
