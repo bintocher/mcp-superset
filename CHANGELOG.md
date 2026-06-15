@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2026-06-15
+
+### Fixed
+
+- **`--version` reported a stale, hard-coded version.** The CLI banner was pinned to `0.2.4` in `__main__.py`, so `mcp-superset --version` printed the wrong version regardless of the installed package. It now derives the version from `mcp_superset.__version__`, keeping the CLI in sync with the package version automatically.
+
 ## [0.2.6] - 2026-06-09
 
 ### Fixed

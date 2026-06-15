@@ -5,6 +5,8 @@ import os
 
 import uvicorn.config
 
+from mcp_superset import __version__
+
 # Override default uvicorn log config BEFORE importing FastMCP
 _date_format = "%Y-%m-%d %H:%M:%S"
 _log_format = "%(asctime)s.%(msecs)03d %(levelname)-5s %(message)s"
@@ -51,7 +53,7 @@ def main():
     parser.add_argument(
         "--version",
         action="version",
-        version="%(prog)s 0.2.4",
+        version=f"%(prog)s {__version__}",
     )
 
     args = parser.parse_args()
